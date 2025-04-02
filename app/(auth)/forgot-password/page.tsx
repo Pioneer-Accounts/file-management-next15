@@ -66,7 +66,7 @@ export default function ForgotPassword() {
                   Submit
                 </button>
                 <Link
-                  href="/auth/signin"
+                  href="/signin"
                   className="flex-1 bg-white text-gray-700 p-3 rounded-md font-medium border border-gray-200 text-center hover:bg-gray-50 transition-colors"
                 >
                   Cancel
