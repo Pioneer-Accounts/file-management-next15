@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+// import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
@@ -33,14 +33,13 @@ export default function SignIn() {
               <form className="mt-8 space-y-6">
                 <div className="space-y-1">
                   <label
-                    htmlFor="email"
                     className="text-sm font-medium text-gray-700"
                   >
                     Email
                   </label>
                   <Input
                     id="email"
-                    type="email"
+                    type="text"
                     className="w-full p-3 border border-gray-200 rounded-lg"
                   />
                 </div>
@@ -76,50 +75,18 @@ export default function SignIn() {
                   </div>
                 </div>
 
-                {/* <div className="pt-2">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-200"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white text-gray-500">Or with</span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      className="flex justify-center items-center py-2.5 border border-gray-200 rounded-lg"
-                    >
-                      <Image src="/images/google-logo.png" alt="Google" width={20} height={20} />
-                      <span className="ml-2 text-sm">Sign Up with Google</span>
-                    </button>
-                    
-                    <button
-                      type="button"
-                      className="flex justify-center items-center py-2.5 border border-gray-200 rounded-lg"
-                    >
-                      <Image src="/images/apple-logo.png" alt="Apple" width={20} height={20} />
-                      <span className="ml-2 text-sm">Sign Up with Apple</span>
-                    </button>
-                  </div>
-                </div> */}
-
                 <Button
                   type="submit"
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg"
                 >
-                  Sign Up
+                  Sign In
                 </Button>
 
                 <p className="text-center text-sm text-gray-500">
                   Not a member yet?{" "}
-                  <Link
-                    href="/signup"
-                    className="text-blue-500 hover:underline"
-                  >
-                    Sign Up
-                  </Link>
+                  <a href="/signup" className="text-blue-500">
+                Sign Up
+              </a>
                 </p>
               </form>
             </div>
