@@ -116,7 +116,7 @@ export default function SignUp() {
               Already have an account?{" "}
               <a href="#" className="text-blue-500">
                 Sign In
-              </Link>
+              </a>
             </p>
           </div>
         </div>
