@@ -9,11 +9,13 @@ import { Eye, EyeOff } from "lucide-react";
 
 export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   return (
     <div className="min-h-screen flex items-center justify-center  p-4">
       {/* Background Design */}
-      <div className="absolute top-0 left-0 w-full h-full">
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
         <div className="absolute top-0 left-0 w-1/3 h-1/3 bg-blue-300 rounded-br-[100%]"></div>
         <div className="absolute bottom-0 right-0 w-1/3 h-1/3 bg-blue-200 rounded-tl-[100%]"></div>
       </div>
@@ -41,6 +43,8 @@ export default function SignIn() {
                     id="email"
                     type="text"
                     className="w-full p-3 border border-gray-200 rounded-lg"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
 
@@ -56,6 +60,8 @@ export default function SignIn() {
                       id="password"
                       type={showPassword ? "text" : "password"}
                       className="w-full p-3 border border-gray-200 rounded-lg pr-10"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                     />
                     <button
                       type="button"
@@ -74,6 +80,35 @@ export default function SignIn() {
                     </Link>
                   </div>
                 </div>
+
+                {/* <div className="pt-2">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">Or with</span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      className="flex justify-center items-center py-2.5 border border-gray-200 rounded-lg"
+                    >
+                      <Image src="/images/google-logo.png" alt="Google" width={20} height={20} />
+                      <span className="ml-2 text-sm">Sign Up with Google</span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      className="flex justify-center items-center py-2.5 border border-gray-200 rounded-lg"
+                    >
+                      <Image src="/images/apple-logo.png" alt="Apple" width={20} height={20} />
+                      <span className="ml-2 text-sm">Sign Up with Apple</span>
+                    </button>
+                  </div>
+                </div> */}
 
                 <Button
                   type="submit"

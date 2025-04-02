@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function SignUp() {
   const [email, setEmail] = useState("");
@@ -113,9 +114,9 @@ export default function SignUp() {
 
             <p className="text-center text-gray-500 mt-6">
               Already have an account?{" "}
-              <a href="/signin" className="text-blue-500">
+              <a href="#" className="text-blue-500">
                 Sign In
-              </a>
+              </Link>
             </p>
           </div>
         </div>
