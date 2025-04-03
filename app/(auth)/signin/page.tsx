@@ -6,14 +6,48 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 export default function SignIn() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      // Make API request using axios
+      const response = await axios.post("http://localhost:8000/api/token/", {
+        username,
+        password,
+      });
+      
+      // Store token in localStorage or cookies
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+        
+        // Redirect to homepage after successful login
+        router.push("/");
+      } else {
+        throw new Error("Authentication failed");
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Invalid email or password. Please try again.");
+      console.error("Login error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex items-center bg-[#f0f6ff] justify-center  p-4">
+    <div className="min-h-screen flex items-center bg-[#f0f6ff] justify-center p-4">
       {/* Background Design */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
         <div className="absolute top-0 left-0 w-1/3 h-1/3 bg-blue-300 rounded-br-[100%]"></div>
@@ -32,7 +66,13 @@ export default function SignIn() {
               <h2 className="text-2xl font-semibold text-gray-800">Sign In</h2>
               <p className="text-gray-400 text-sm mt-1">to your account</p>
 
-              <form className="mt-8 space-y-6">
+              {error && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm">
+                  {error}
+                </div>
+              )}
+
+              <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                 <div className="space-y-1">
                   <label
                     className="text-sm font-medium text-gray-700"
@@ -40,11 +80,12 @@ export default function SignIn() {
                     Email
                   </label>
                   <Input
-                    id="email"
+                    id="username"
                     type="text"
                     className="w-full p-3 border border-gray-200 rounded-lg"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
                   />
                 </div>
 
@@ -62,6 +103,7 @@ export default function SignIn() {
                       className="w-full p-3 border border-gray-200 rounded-lg pr-10"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      required
                     />
                     <button
                       type="button"
@@ -113,15 +155,16 @@ export default function SignIn() {
                 <Button
                   type="submit"
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg"
+                  disabled={loading}
                 >
-                  Sign In
+                  {loading ? "Signing in..." : "Sign In"}
                 </Button>
 
                 <p className="text-center text-sm text-gray-500">
                   Not a member yet?{" "}
-                  <a href="/signup" className="text-blue-500">
-                Sign Up
-              </a>
+                  <Link href="/signup" className="text-blue-500">
+                    Sign Up
+                  </Link>
                 </p>
               </form>
             </div>
