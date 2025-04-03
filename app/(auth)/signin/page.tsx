@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import Cookies from "js-cookie";
 
 export default function SignIn() {
   const router = useRouter();
@@ -31,21 +32,20 @@ export default function SignIn() {
         }
       );
 
-      // Store both access and refresh tokens
+      // Store tokens in cookies
       if (response.data.access && response.data.refresh) {
-        localStorage.setItem("accessToken", response.data.access);
-        localStorage.setItem("refreshToken", response.data.refresh);
+        Cookies.set("accessToken", response.data.access, { expires: 7 });
+        Cookies.set("refreshToken", response.data.refresh, { expires: 30 });
 
-        // Redirect to homepage after successful login
         router.push("/");
       } else {
         throw new Error("Authentication failed");
       }
     } catch (err: any) {
       setError(
-        err.response?.data?.detail || 
-        err.response?.data?.message || 
-        "Invalid email or password. Please try again."
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Invalid email or password. Please try again."
       );
       console.error("Login error:", err);
     } finally {
