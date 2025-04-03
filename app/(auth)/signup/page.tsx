@@ -3,17 +3,41 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import axios from "axios";
 
 export default function SignUp() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission logic here
-    console.log({ email, password, repeatPassword, acceptTerms });
+    try {
+      const response = await axios.post('http://192.168.1.14:8000/register/', {
+        username: email,
+        email: email,
+        password: password,
+        password_confirm: repeatPassword
+      });
+
+      toast.success('Registration successful! Please sign in.');
+
+      // Redirect to sign in page after successful registration
+      setTimeout(() => {
+        router.push('/signin');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Registration error:', error);
+      const errorMessage = axios.isAxiosError(error) 
+        ? error.response?.data?.message || "Registration failed"
+        : "Registration failed";
+      toast.error(errorMessage);
+    }
   };
 
   return (

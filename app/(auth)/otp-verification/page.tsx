@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 
 export default function OtpVerification() {
   const router = useRouter();
@@ -21,10 +28,10 @@ export default function OtpVerification() {
       alert("Passwords do not match");
       return;
     }
-    
+
     // Handle OTP verification and password reset logic here
     console.log({ otp, newPassword, confirmPassword });
-    
+
     // Redirect to dashboard after successful verification
     router.push("/");
   };
@@ -32,7 +39,7 @@ export default function OtpVerification() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#f0f6ff] relative overflow-hidden">
       {/* Background Design */}
-      <div className="absolute top-0 left-0 w-full h-full">
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
         <div className="absolute top-0 left-0 w-1/3 h-1/3 bg-blue-300 rounded-br-[100%]"></div>
         <div className="absolute bottom-0 right-0 w-1/3 h-1/3 bg-blue-200 rounded-tl-[100%]"></div>
       </div>
@@ -54,22 +61,37 @@ export default function OtpVerification() {
         {/* Right Section */}
         <div className="w-1/2 p-12 bg-gradient-to-br from-blue-100 to-white">
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold text-gray-800 mb-1">Verify OTP</h2>
-            <p className="text-gray-500 text-sm mb-8">Enter OTP and set your new password</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-1">
+              Verify OTP
+            </h2>
+            <p className="text-gray-500 text-sm mb-8">
+              Enter OTP and set your new password
+            </p>
 
             <form onSubmit={handleSubmit}>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   OTP Code
                 </label>
-                <input
+                {/* <input
                   type="text"
                   className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter OTP code"
                   required
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
-                />
+                /> */}
+
+<InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS_AND_CHARS}>
+      <InputOTPGroup>
+        <InputOTPSlot index={0} />
+        <InputOTPSlot index={1} />
+        <InputOTPSlot index={2} />
+        <InputOTPSlot index={3} />
+        <InputOTPSlot index={4} />
+        <InputOTPSlot index={5} />
+      </InputOTPGroup>
+    </InputOTP>
               </div>
 
               <div className="mb-4">
@@ -94,7 +116,8 @@ export default function OtpVerification() {
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Use 8 or more characters with a mix of letters, numbers & symbols.
+                  Use 8 or more characters with a mix of letters, numbers &
+                  symbols.
                 </p>
               </div>
 
@@ -116,13 +139,17 @@ export default function OtpVerification() {
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showConfirmPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
                   </button>
                 </div>
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="w-full bg-blue-600 text-white p-3 rounded-md font-medium hover:bg-blue-700 transition-colors"
               >
                 Set Password

@@ -3,14 +3,39 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle password reset logic here
-    console.log({ email });
+    setLoading(true);
+    setError("");
+
+    try {
+      // Updated to match the curl command structure
+      await axios.post(
+        "http://localhost:8000/accounts/password-reset/request/",
+        JSON.stringify({
+          email: email.trim(),
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      router.push("/otp-verification");
+    } catch (err) {
+      setError("Failed to send reset email. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
