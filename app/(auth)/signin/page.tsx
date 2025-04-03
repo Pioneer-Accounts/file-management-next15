@@ -37,7 +37,8 @@ export default function SignIn() {
         Cookies.set("accessToken", response.data.access, { expires: 7 });
         Cookies.set("refreshToken", response.data.refresh, { expires: 30 });
 
-        router.push("/");
+        // Redirect to dashboard instead of home
+        router.push("/dashboard");
       } else {
         throw new Error("Authentication failed");
       }
