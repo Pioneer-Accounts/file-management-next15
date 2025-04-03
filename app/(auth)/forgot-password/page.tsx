@@ -11,7 +11,7 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
-
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -48,7 +48,7 @@ export default function ForgotPassword() {
 
       <div className="bg-white shadow-xl rounded-3xl flex max-w-5xl w-full relative z-10 overflow-hidden">
         {/* Left Section */}
-        <div className=" bg-white w-1/2 p-12  flex flex-col items-center justify-center">
+        <div className="bg-white w-1/2 p-12 flex flex-col items-center justify-center">
           <div className="relative w-full h-64 md:h-80">
             <Image
               src="/FP.jpg"
@@ -59,20 +59,16 @@ export default function ForgotPassword() {
             />
           </div>
         </div>
-        <div className="w-1/2 p-12  from-blue-100 via-blue-50 to-teal-50 bg-gradient-to-br flex items-center justify-center">
+        <div className="w-1/2 p-12 from-blue-100 via-blue-50 to-teal-50 bg-gradient-to-br flex items-center justify-center">
           <div className="max-w-md w-full">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              Forgot Password?
-            </h2>
-            <p className="text-gray-500 text-sm mb-8">
-              Enter your email to reset your password.
-            </p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Forgot Password?</h2>
+            <p className="text-gray-500 text-sm mb-8">Enter your email to reset your password.</p>
+
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
             <form onSubmit={handleSubmit}>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                 <input
                   type="email"
                   className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -86,9 +82,10 @@ export default function ForgotPassword() {
               <div className="flex gap-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white p-3 rounded-md font-medium hover:bg-blue-700 transition-colors"
+                  className="flex-1 bg-blue-600 text-white p-3 rounded-md font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  disabled={loading}
                 >
-                  Submit
+                  {loading ? "Submitting..." : "Submit"}
                 </button>
                 <Link
                   href="/signin"
