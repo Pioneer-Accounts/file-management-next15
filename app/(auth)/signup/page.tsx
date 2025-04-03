@@ -8,7 +8,6 @@ import axios from "axios";
 
 export default function SignUp() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
@@ -18,7 +17,7 @@ export default function SignUp() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate passwords match
     if (password !== repeatPassword) {
       setError("Passwords do not match");
@@ -37,28 +36,28 @@ export default function SignUp() {
     try {
       // Make API request to backend
       await axios.post(
-        "http://localhost:8000/register/",
+        `${process.env.NEXT_PUBLIC_API_URL}/register/`,
         {
-          username,
-          email,
-          password,
-          password_confirm: repeatPassword
+          username: email,
+          email: email,
+          password: password,
+          password_confirm: repeatPassword,
         },
         {
           headers: {
-            "Content-Type": "application/json"
-          }
+            "Content-Type": "application/json",
+          },
         }
       );
-      
+
       // Redirect to signin page after successful registration
-      router.push("/activate");
+      router.push("/signin");
     } catch (err: any) {
       console.error("Signup error:", err);
       setError(
-        err.response?.data?.message || 
-        err.response?.data?.error || 
-        "Registration failed. Please try again."
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Registration failed. Please try again."
       );
     } finally {
       setLoading(false);
@@ -69,7 +68,7 @@ export default function SignUp() {
     <div className="flex items-center justify-center min-h-screen bg-[#f0f6ff] relative overflow-hidden">
       {/* Background Design */}
       <div className="absolute top-0 left-0 w-full h-full">
-        <div className="absolute top-0 left-0 w-1/3 h-1/3 bg-blue-300 rounded-br-[100%]"></div>
+        <div className="absolute top-0 left-0 w-1/3 h-1/3 bg-[#926dc9] rounded-br-[100%]"></div>
         <div className="absolute bottom-0 right-0 w-1/3 h-1/3 bg-blue-200 rounded-tl-[100%]"></div>
       </div>
 
@@ -100,20 +99,6 @@ export default function SignUp() {
             )}
 
             <form onSubmit={handleSubmit}>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Username"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-              </div>
-
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email
@@ -177,7 +162,7 @@ export default function SignUp() {
                 </label>
               </div>
 
-              <button 
+              <button
                 type="submit"
                 className="w-full bg-blue-600 text-white p-3 rounded-md font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
                 disabled={loading}
