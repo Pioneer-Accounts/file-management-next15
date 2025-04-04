@@ -1,22 +1,44 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const publicPaths = ['/signin', '/signup', '/otp-verification', '/forgot-password']
+// Define public paths as a Set for O(1) lookup instead of array (which requires O(n) lookup)
+const PUBLIC_PATHS = new Set(['/signin', '/signup', '/otp-verification', '/forgot-password'])
+
+// Create a function to check if a path is public - more efficient than using .some() on every request
+function isPublicPath(path: string): boolean {
+  // Check direct matches first (most common case)
+  if (PUBLIC_PATHS.has(path)) return true
+  
+  // For paths that might have additional segments
+  for (const publicPath of PUBLIC_PATHS) {
+    if (path.startsWith(`${publicPath}/`)) return true
+  }
+  
+  return false
+}
 
 export function middleware(request: NextRequest) {
-  const accessToken = request.cookies.get('accessToken')
   const currentPath = request.nextUrl.pathname
-
-  // Check if the path is public
-  const isPublicPath = publicPaths.some(path => currentPath.startsWith(path))
+  
+  // Early return if accessing static assets (improves performance for static files)
+  if (currentPath.includes('/_next/') || 
+      currentPath.includes('/api/') || 
+      currentPath.endsWith('.ico') ||
+      currentPath.includes('.')) {
+    return NextResponse.next()
+  }
+  
+  // Get access token from cookies - more efficient
+  const accessToken = request.cookies.get('accessToken')?.value
+  const isPathPublic = isPublicPath(currentPath)
 
   // If not logged in and trying to access protected route
-  if (!accessToken && !isPublicPath) {
+  if (!accessToken && !isPathPublic) {
     return NextResponse.redirect(new URL('/signin', request.url))
   }
 
   // If logged in and trying to access auth pages
-  if (accessToken && isPublicPath) {
+  if (accessToken && isPathPublic) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
