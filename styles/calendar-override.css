@@ -1,0 +1,44 @@
+/* Calendar range selection styling overrides */
+.rdp-day_range_start,
+.rdp-day_range_end {
+  background-color: theme('colors.blue.600') !important;
+  color: white !important;
+  border-radius: theme('borderRadius.md') !important;
+}
+
+.rdp-day_range_middle {
+  background-color: theme('colors.blue.100') !important;
+  color: theme('colors.blue.800') !important;
+  border-radius: 0 !important;
+}
+
+.rdp-day_selected {
+  background-color: theme('colors.blue.600') !important;
+  color: white !important;
+}
+
+.rdp-day_selected:hover {
+  background-color: theme('colors.blue.700') !important;
+}
+
+/* Improve the visibility of the date range */
+.rdp-cell {
+  position: relative;
+}
+
+/* Fix for highlighting the entire range */
+.rdp-cell:has(.rdp-day_range_middle) {
+  background-color: theme('colors.blue.100');
+}
+
+.rdp-cell:has(.rdp-day_range_start) {
+  background-color: theme('colors.blue.100');
+  border-top-left-radius: theme('borderRadius.md');
+  border-bottom-left-radius: theme('borderRadius.md');
+}
+
+.rdp-cell:has(.rdp-day_range_end) {
+  background-color: theme('colors.blue.100');
+  border-top-right-radius: theme('borderRadius.md');
+  border-bottom-right-radius: theme('borderRadius.md');
+}
