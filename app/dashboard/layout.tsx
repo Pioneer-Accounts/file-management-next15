@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FileText } from "lucide-react";
+import { Home, FileText, FolderOpen } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -15,6 +15,7 @@ export default function DashboardLayout({
   const menuItems = [
     { icon: Home, label: "Home", href: "/dashboard" },
     { icon: FileText, label: "Documents", href: "/dashboard/documents" },
+    { icon: FolderOpen, label: "Projects", href: "/dashboard/projects" },
   ];
 
   return (

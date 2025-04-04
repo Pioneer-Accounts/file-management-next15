@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useParams } from "next/navigation";
 import {
   Eye,
   Download,
@@ -16,18 +17,68 @@ import { DateRange } from "react-day-picker";
 
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import "@/styles/calendar-override.css";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import "@/styles/calendar-override.css";
 
-export default function Documents() {
+export default function ProjectDetail() {
+  // Get the project ID from the URL
+  const params = useParams();
+  const projectId = params.id;
+
+  // Find the project by ID
+  const projects = [
+    {
+      id: "1",
+      name: "UI Design",
+      description: "User interface design projects",
+      color: "bg-blue-100",
+    },
+    {
+      id: "2",
+      name: "DashLite Resource",
+      description: "Dashboard resources and components",
+      color: "bg-blue-100",
+    },
+    {
+      id: "3",
+      name: "Projects",
+      description: "Client project files and assets",
+      color: "bg-blue-100",
+    },
+    {
+      id: "4",
+      name: "Marketing",
+      description: "Marketing materials and campaigns",
+      color: "bg-green-100",
+    },
+    {
+      id: "5",
+      name: "Development",
+      description: "Software development projects",
+      color: "bg-purple-100",
+    },
+    {
+      id: "6",
+      name: "Research",
+      description: "Research documents and findings",
+      color: "bg-yellow-100",
+    },
+  ];
+
+  const project = projects.find((p) => p.id === projectId) || {
+    id: "-1",
+    name: "Unknown Project",
+    description: "Project not found",
+    color: "bg-gray-100",
+  };
+
   // States for filtering and searching
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  // Define our date range state to match the structure from react-day-picker
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [tagSearchTerm, setTagSearchTerm] = useState("");
@@ -49,50 +100,36 @@ export default function Documents() {
     };
   }, []);
 
+  // Sample project documents
   const documents = [
     {
       id: 1,
-      title: "testpic7",
+      title: `${project.name} Doc 1`,
       date: "Apr 3, 2025",
-      tags: ["demo tag"],
+      tags: ["design", "prototype"],
       thumbnail: "/signup.jpg",
     },
     {
       id: 2,
-      title: "testpic7",
-      date: "Apr 3, 2025",
-      tags: ["demo tag"],
+      title: `${project.name} Doc 2`,
+      date: "Apr 2, 2025",
+      tags: ["wireframe", "mockup"],
       thumbnail: "/signup.jpg",
     },
     {
       id: 3,
-      title: "testpic7",
-      date: "Apr 3, 2025",
-      tags: ["demo tag"],
+      title: `${project.name} Doc 3`,
+      date: "Apr 1, 2025",
+      tags: ["final", "approved"],
       thumbnail: "/signup.jpg",
     },
     {
       id: 4,
-      title: "testpic7",
-      date: "Apr 3, 2025",
-      tags: ["demo tag"],
+      title: `${project.name} Doc 4`,
+      date: "Mar 30, 2025",
+      tags: ["revision", "draft"],
       thumbnail: "/signup.jpg",
     },
-    {
-      id: 5,
-      title: "testpic7",
-      date: "Apr 3, 2025",
-      tags: ["demo tag"],
-      thumbnail: "/signup.jpg",
-    },
-    {
-      id: 6,
-      title: "testpic7",
-      date: "Apr 3, 2025",
-      tags: ["demo tag"],
-      thumbnail: "/signup.jpg",
-    },
-    // Add more documents as needed
   ];
 
   // Extract all unique tags
@@ -142,10 +179,13 @@ export default function Documents() {
     <div>
       <div className="mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-4 rounded-md bg-blue-100">
+          <div className={`p-4 rounded-md ${project.color}`}>
             <FileText className="h-6 w-6 text-blue-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800">Documents</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">{project.name}</h1>
+            <p className="text-gray-600">{project.description}</p>
+          </div>
         </div>
       </div>
 
@@ -300,6 +340,8 @@ export default function Documents() {
           </Popover>
         </div>
       </div>
+
+      {/* Project Documents Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {filteredDocuments.map((doc) => (
           <div key={doc.id} className="bg-[#1a1a1a] rounded-lg overflow-hidden">
