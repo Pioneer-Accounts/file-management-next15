@@ -11,6 +11,8 @@ import {
   X,
   ChevronDown,
   CalendarIcon,
+  Plus,
+  Upload,
 } from "lucide-react";
 import { format, isWithinInterval, isSameDay } from "date-fns";
 import { DateRange } from "react-day-picker";
@@ -174,6 +176,55 @@ export default function ProjectDetail() {
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
+
+  // Add state for modal
+  const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
+  const [newDocTitle, setNewDocTitle] = useState("");
+  const [newDocTags, setNewDocTags] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Handle file drop
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.files) {
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      setFiles([...files, ...droppedFiles]);
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files);
+      setFiles([...files, ...selectedFiles]);
+    }
+  };
+
+  // Toggle tag selection for new document
+  const toggleNewDocTag = (tag: string) => {
+    setNewDocTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  // Close modal when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node) &&
+        isNewDocModalOpen
+      ) {
+        setIsNewDocModalOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isNewDocModalOpen]);
 
   return (
     <div>
@@ -339,6 +390,14 @@ export default function ProjectDetail() {
             </PopoverContent>
           </Popover>
         </div>
+        {/* New Document Button - Opens modal */}
+        <button
+          className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors ml-auto"
+          onClick={() => setIsNewDocModalOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          <span>New Document</span>
+        </button>
       </div>
 
       {/* Project Documents Grid */}
@@ -394,6 +453,171 @@ export default function ProjectDetail() {
           </div>
         ))}
       </div>
+
+      {/* New Document Modal */}
+      {isNewDocModalOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
+          <div
+            ref={modalRef}
+            className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4"
+          >
+            {/* Modal Header */}
+            <div className="p-4 border-b">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">Add New Document</h2>
+                <button
+                  onClick={() => setIsNewDocModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4">
+              <div className="space-y-4">
+                {/* Document Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={newDocTitle}
+                    onChange={(e) => setNewDocTitle(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter document title"
+                  />
+                </div>
+
+                {/* Document Tags */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tags
+                  </label>
+                  <div className="relative">
+                    <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-md min-h-[42px] mb-2">
+                      {newDocTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded flex items-center"
+                        >
+                          {tag}
+                          <X
+                            className="ml-1 h-3 w-3 cursor-pointer"
+                            onClick={() => toggleNewDocTag(tag)}
+                          />
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md">
+                      {allTags.map((tag) => (
+                        <div
+                          key={tag}
+                          className="flex items-center p-2 hover:bg-gray-100"
+                          onClick={() => toggleNewDocTag(tag)}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={newDocTags.includes(tag)}
+                            onChange={() => {}}
+                            className="mr-2"
+                          />
+                          <span className="text-sm cursor-pointer">{tag}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* File Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Files
+                  </label>
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center cursor-pointer hover:bg-gray-50"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      multiple
+                    />
+                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-500">
+                      Drag and drop files here, or click to select files
+                    </p>
+                    {files.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium">Selected files:</p>
+                        <ul className="mt-2 text-sm text-gray-500 text-left">
+                          {files.map((file, index) => (
+                            <li
+                              key={index}
+                              className="flex justify-between items-center"
+                            >
+                              <span className="truncate max-w-[300px]">
+                                {file.name}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFiles(files.filter((_, i) => i !== index));
+                                }}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t flex justify-end space-x-2">
+              <button
+                onClick={() => setIsNewDocModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  console.log({
+                    title: newDocTitle,
+                    tags: newDocTags,
+                    files,
+                  });
+                  setIsNewDocModalOpen(false);
+                  setNewDocTitle("");
+                  setNewDocTags([]);
+                  setFiles([]);
+                }}
+                disabled={!newDocTitle || files.length === 0}
+                className={`px-4 py-2 rounded-md text-white ${
+                  !newDocTitle || files.length === 0
+                    ? "bg-blue-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                Add Document
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
