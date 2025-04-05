@@ -134,8 +134,17 @@ export default function ProjectDetail() {
     },
   ];
 
-  // Extract all unique tags
-  const allTags = Array.from(new Set(documents.flatMap((doc) => doc.tags)));
+  // Sample data for tags
+  const allTags = [
+    "Important",
+    "Urgent",
+    "Personal",
+    "Business",
+    "Finance",
+    "Legal",
+    "Tax",
+    "Insurance",
+  ];
 
   // Sample correspondents data
   const correspondents = [
@@ -197,26 +206,43 @@ export default function ProjectDetail() {
     );
   };
 
-  // Add state for modal
+  // State for new document modal
   const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState("");
   const [newDocTags, setNewDocTags] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
-  const [selectedPreviewFile, setSelectedPreviewFile] = useState<File | null>(null);
+  const [selectedPreviewFile, setSelectedPreviewFile] = useState<File | null>(
+    null
+  );
   const [creationDate, setCreationDate] = useState<Date>(new Date());
   const [notes, setNotes] = useState<string>("");
-  const [selectedCorrespondent, setSelectedCorrespondent] = useState<string>("");
+  const [selectedCorrespondent, setSelectedCorrespondent] =
+    useState<string>("");
   const [documentType, setDocumentType] = useState<string>("");
-  const [isCorrespondentDropdownOpen, setIsCorrespondentDropdownOpen] = useState(false);
-  const [correspondentSearchTerm, setCorrespondentSearchTerm] = useState("");
-  const [isDocTypeDropdownOpen, setIsDocTypeDropdownOpen] = useState(false);
+
+  // State for dropdowns
   const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
+  const [isCorrespondentDropdownOpen, setIsCorrespondentDropdownOpen] =
+    useState(false);
+  const [isDocTypeDropdownOpen, setIsDocTypeDropdownOpen] = useState(false);
   const [modalTagSearchTerm, setModalTagSearchTerm] = useState("");
+  const [correspondentSearchTerm, setCorrespondentSearchTerm] = useState("");
+
+  // State for new entity modals
+  const [isNewTagModalOpen, setIsNewTagModalOpen] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [isNewCorrespondentModalOpen, setIsNewCorrespondentModalOpen] =
+    useState(false);
+  const [newCorrespondentName, setNewCorrespondentName] = useState("");
+  const [isNewDocTypeModalOpen, setIsNewDocTypeModalOpen] = useState(false);
+  const [newDocTypeName, setNewDocTypeName] = useState("");
+
+  // Refs for handling outside clicks
+  const modalRef = useRef<HTMLDivElement>(null);
+  const tagsDropdownRef = useRef<HTMLDivElement>(null);
   const correspondentDropdownRef = useRef<HTMLDivElement>(null);
   const documentTypeDropdownRef = useRef<HTMLDivElement>(null);
-  const tagsDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
 
   // Handle file drop
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -225,7 +251,7 @@ export default function ProjectDetail() {
       const droppedFiles = Array.from(e.dataTransfer.files);
       const newFiles = [...files, ...droppedFiles];
       setFiles(newFiles);
-      
+
       // Select the first file for preview if no file is currently selected
       if (!selectedPreviewFile && droppedFiles.length > 0) {
         setSelectedPreviewFile(droppedFiles[0]);
@@ -239,7 +265,7 @@ export default function ProjectDetail() {
       const selectedFiles = Array.from(e.target.files);
       const newFiles = [...files, ...selectedFiles];
       setFiles(newFiles);
-      
+
       // Select the first file for preview if no file is currently selected
       if (!selectedPreviewFile && selectedFiles.length > 0) {
         setSelectedPreviewFile(selectedFiles[0]);
@@ -265,7 +291,7 @@ export default function ProjectDetail() {
       ) {
         setIsNewDocModalOpen(false);
       }
-      
+
       // Close correspondent dropdown when clicking outside
       if (
         correspondentDropdownRef.current &&
@@ -274,7 +300,7 @@ export default function ProjectDetail() {
       ) {
         setIsCorrespondentDropdownOpen(false);
       }
-      
+
       // Close document type dropdown when clicking outside
       if (
         documentTypeDropdownRef.current &&
@@ -297,7 +323,12 @@ export default function ProjectDetail() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isNewDocModalOpen, isCorrespondentDropdownOpen, isDocTypeDropdownOpen, isTagsDropdownOpen]);
+  }, [
+    isNewDocModalOpen,
+    isCorrespondentDropdownOpen,
+    isDocTypeDropdownOpen,
+    isTagsDropdownOpen,
+  ]);
 
   return (
     <div>
@@ -574,42 +605,59 @@ export default function ProjectDetail() {
                         Tags
                       </label>
                       <div className="relative" ref={tagsDropdownRef}>
-                        <div 
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
-                          onClick={() => setIsTagsDropdownOpen(!isTagsDropdownOpen)}
-                        >
-                          <div className="flex flex-wrap gap-2 overflow-hidden">
-                            {newDocTags.length > 0 ? (
-                              newDocTags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded flex items-center"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {tag}
-                                  <X
-                                    className="ml-1 h-3 w-3 cursor-pointer"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleNewDocTag(tag);
-                                    }}
-                                  />
+                        <div className="flex">
+                          <div
+                            className="w-full px-3 py-2 border border-gray-300 rounded-l-md flex justify-between items-center cursor-pointer"
+                            onClick={() =>
+                              setIsTagsDropdownOpen(!isTagsDropdownOpen)
+                            }
+                          >
+                            <div className="flex flex-wrap gap-2 overflow-hidden">
+                              {newDocTags.length > 0 ? (
+                                newDocTags.map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded flex items-center"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {tag}
+                                    <X
+                                      className="ml-1 h-3 w-3 cursor-pointer"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleNewDocTag(tag);
+                                      }}
+                                    />
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-gray-500">
+                                  Select tags...
                                 </span>
-                              ))
-                            ) : (
-                              <span className="text-gray-500">Select tags...</span>
-                            )}
+                              )}
+                            </div>
+                            <ChevronDown className="h-4 w-4 ml-2 flex-shrink-0" />
                           </div>
-                          <ChevronDown className="h-4 w-4 ml-2 flex-shrink-0" />
+                          <button
+                            className="px-2 py-2 bg-blue-600 text-white border border-blue-600 rounded-r-md hover:bg-blue-700"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsNewTagModalOpen(true);
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
                         </div>
-                        
+
                         {isTagsDropdownOpen && (
                           <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
                             <div className="p-2">
                               <input
                                 type="text"
                                 value={modalTagSearchTerm}
-                                onChange={(e) => setModalTagSearchTerm(e.target.value)}
+                                onChange={(e) =>
+                                  setModalTagSearchTerm(e.target.value)
+                                }
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="Search tags..."
                                 onClick={(e) => e.stopPropagation()}
@@ -617,7 +665,11 @@ export default function ProjectDetail() {
                             </div>
                             <div className="max-h-60 overflow-y-auto">
                               {allTags
-                                .filter(tag => tag.toLowerCase().includes(modalTagSearchTerm.toLowerCase()))
+                                .filter((tag) =>
+                                  tag
+                                    .toLowerCase()
+                                    .includes(modalTagSearchTerm.toLowerCase())
+                                )
                                 .map((tag) => (
                                   <div
                                     key={tag}
@@ -634,8 +686,14 @@ export default function ProjectDetail() {
                                     <span className="text-sm">{tag}</span>
                                   </div>
                                 ))}
-                              {allTags.filter(tag => tag.toLowerCase().includes(modalTagSearchTerm.toLowerCase())).length === 0 && (
-                                <div className="p-2 text-gray-500 text-center">No tags found</div>
+                              {allTags.filter((tag) =>
+                                tag
+                                  .toLowerCase()
+                                  .includes(modalTagSearchTerm.toLowerCase())
+                              ).length === 0 && (
+                                <div className="p-2 text-gray-500 text-center">
+                                  No tags found
+                                </div>
                               )}
                             </div>
                           </div>
@@ -650,9 +708,11 @@ export default function ProjectDetail() {
                       </label>
                       <input
                         type="date"
-                        value={creationDate.toISOString().split('T')[0]}
+                        value={creationDate.toISOString().split("T")[0]}
                         onChange={(e) => {
-                          const newDate = e.target.value ? new Date(e.target.value) : new Date();
+                          const newDate = e.target.value
+                            ? new Date(e.target.value)
+                            : new Date();
                           setCreationDate(newDate);
                         }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -668,25 +728,44 @@ export default function ProjectDetail() {
                         Correspondent
                       </label>
                       <div className="relative" ref={correspondentDropdownRef}>
-                        <div 
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
-                          onClick={() => setIsCorrespondentDropdownOpen(!isCorrespondentDropdownOpen)}
-                        >
-                          <span>
-                            {selectedCorrespondent
-                              ? correspondents.find((c) => c.id === selectedCorrespondent)?.name
-                              : "Select correspondent..."}
-                          </span>
-                          <ChevronDown className="h-4 w-4" />
+                        <div className="flex">
+                          <div
+                            className="w-full px-3 py-2 border border-gray-300 rounded-l-md flex justify-between items-center cursor-pointer"
+                            onClick={() =>
+                              setIsCorrespondentDropdownOpen(
+                                !isCorrespondentDropdownOpen
+                              )
+                            }
+                          >
+                            <span>
+                              {selectedCorrespondent
+                                ? correspondents.find(
+                                    (c) => c.id === selectedCorrespondent
+                                  )?.name
+                                : "Select correspondent..."}
+                            </span>
+                            <ChevronDown className="h-4 w-4" />
+                          </div>
+                          <button
+                            className="px-2 py-2 bg-blue-600 text-white border border-blue-600 rounded-r-md hover:bg-blue-700"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsNewCorrespondentModalOpen(true);
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
                         </div>
-                        
+
                         {isCorrespondentDropdownOpen && (
                           <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
                             <div className="p-2">
                               <input
                                 type="text"
                                 value={correspondentSearchTerm}
-                                onChange={(e) => setCorrespondentSearchTerm(e.target.value)}
+                                onChange={(e) =>
+                                  setCorrespondentSearchTerm(e.target.value)
+                                }
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="Search correspondents..."
                                 onClick={(e) => e.stopPropagation()}
@@ -694,13 +773,25 @@ export default function ProjectDetail() {
                             </div>
                             <div className="max-h-60 overflow-y-auto">
                               {correspondents
-                                .filter(c => c.name.toLowerCase().includes(correspondentSearchTerm.toLowerCase()))
+                                .filter((c) =>
+                                  c.name
+                                    .toLowerCase()
+                                    .includes(
+                                      correspondentSearchTerm.toLowerCase()
+                                    )
+                                )
                                 .map((correspondent) => (
                                   <div
                                     key={correspondent.id}
-                                    className={`p-2 hover:bg-gray-100 cursor-pointer ${selectedCorrespondent === correspondent.id ? 'bg-blue-50' : ''}`}
+                                    className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                                      selectedCorrespondent === correspondent.id
+                                        ? "bg-blue-50"
+                                        : ""
+                                    }`}
                                     onClick={() => {
-                                      setSelectedCorrespondent(correspondent.id);
+                                      setSelectedCorrespondent(
+                                        correspondent.id
+                                      );
                                       setIsCorrespondentDropdownOpen(false);
                                       setCorrespondentSearchTerm("");
                                     }}
@@ -708,9 +799,17 @@ export default function ProjectDetail() {
                                     {correspondent.name}
                                   </div>
                                 ))}
-                                {correspondents.filter(c => c.name.toLowerCase().includes(correspondentSearchTerm.toLowerCase())).length === 0 && (
-                                  <div className="p-2 text-gray-500 text-center">No correspondent found</div>
-                                )}
+                              {correspondents.filter((c) =>
+                                c.name
+                                  .toLowerCase()
+                                  .includes(
+                                    correspondentSearchTerm.toLowerCase()
+                                  )
+                              ).length === 0 && (
+                                <div className="p-2 text-gray-500 text-center">
+                                  No correspondent found
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -723,22 +822,37 @@ export default function ProjectDetail() {
                         Document Type
                       </label>
                       <div className="relative" ref={documentTypeDropdownRef}>
-                        <div 
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
-                          onClick={() => setIsDocTypeDropdownOpen(!isDocTypeDropdownOpen)}
-                        >
-                          <span>
-                            {documentType || "Select document type..."}
-                          </span>
-                          <ChevronDown className="h-4 w-4" />
+                        <div className="flex">
+                          <div
+                            className="w-full px-3 py-2 border border-gray-300 rounded-l-md flex justify-between items-center cursor-pointer"
+                            onClick={() =>
+                              setIsDocTypeDropdownOpen(!isDocTypeDropdownOpen)
+                            }
+                          >
+                            <span>
+                              {documentType || "Select document type..."}
+                            </span>
+                            <ChevronDown className="h-4 w-4" />
+                          </div>
+                          <button
+                            className="px-2 py-2 bg-blue-600 text-white border border-blue-600 rounded-r-md hover:bg-blue-700"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsNewDocTypeModalOpen(true);
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
                         </div>
-                        
+
                         {isDocTypeDropdownOpen && (
                           <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                             {documentTypes.map((type) => (
                               <div
                                 key={type}
-                                className={`p-2 hover:bg-gray-100 cursor-pointer ${documentType === type ? 'bg-blue-50' : ''}`}
+                                className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                                  documentType === type ? "bg-blue-50" : ""
+                                }`}
                                 onClick={() => {
                                   setDocumentType(type);
                                   setIsDocTypeDropdownOpen(false);
@@ -797,7 +911,7 @@ export default function ProjectDetail() {
                                 key={index}
                                 className="flex justify-between items-center"
                               >
-                                <span 
+                                <span
                                   className="truncate max-w-[200px] cursor-pointer hover:text-blue-600"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -809,9 +923,13 @@ export default function ProjectDetail() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setFiles(files.filter((_, i) => i !== index));
+                                    setFiles(
+                                      files.filter((_, i) => i !== index)
+                                    );
                                     if (selectedPreviewFile === file) {
-                                      setSelectedPreviewFile(files.length > 1 ? files[0] : null);
+                                      setSelectedPreviewFile(
+                                        files.length > 1 ? files[0] : null
+                                      );
                                     }
                                   }}
                                   className="text-red-500 hover:text-red-700"
@@ -834,16 +952,17 @@ export default function ProjectDetail() {
                 {selectedPreviewFile ? (
                   <div className="flex-1 overflow-hidden flex flex-col">
                     <div className="mb-2 text-sm text-gray-500">
-                      {selectedPreviewFile.name} ({(selectedPreviewFile.size / 1024).toFixed(2)} KB)
+                      {selectedPreviewFile.name} (
+                      {(selectedPreviewFile.size / 1024).toFixed(2)} KB)
                     </div>
                     <div className="flex-1 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
-                      {selectedPreviewFile.type.startsWith('image/') ? (
+                      {selectedPreviewFile.type.startsWith("image/") ? (
                         <img
                           src={URL.createObjectURL(selectedPreviewFile)}
                           alt={selectedPreviewFile.name}
                           className="max-w-full max-h-full object-contain"
                         />
-                      ) : selectedPreviewFile.type === 'application/pdf' ? (
+                      ) : selectedPreviewFile.type === "application/pdf" ? (
                         <iframe
                           src={URL.createObjectURL(selectedPreviewFile)}
                           className="w-full h-full"
@@ -854,7 +973,7 @@ export default function ProjectDetail() {
                           <FileText className="h-16 w-16 text-gray-400 mx-auto mb-2" />
                           <p>Preview not available for this file type</p>
                           <p className="text-sm text-gray-500 mt-2">
-                            {selectedPreviewFile.type || 'Unknown file type'}
+                            {selectedPreviewFile.type || "Unknown file type"}
                           </p>
                         </div>
                       )}
@@ -912,6 +1031,203 @@ export default function ProjectDetail() {
                 }`}
               >
                 Add Document
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* New Tag Modal */}
+      {isNewTagModalOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 flex flex-col">
+            <div className="p-4 border-b">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">Add New Tag</h2>
+                <button
+                  onClick={() => setIsNewTagModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tag Name
+              </label>
+              <input
+                type="text"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter tag name"
+              />
+            </div>
+            <div className="p-4 border-t flex justify-end space-x-2">
+              <button
+                onClick={() => setIsNewTagModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (newTagName.trim()) {
+                    // Add the new tag to allTags
+                    const updatedTags = [...allTags, newTagName.trim()];
+                    // Update allTags (this would typically be an API call)
+                    // For now, we'll just update the local state
+                    // In a real app, you'd save this to your backend
+
+                    // Also add it to the selected tags for the current document
+                    toggleNewDocTag(newTagName.trim());
+
+                    // Close the modal and reset the input
+                    setIsNewTagModalOpen(false);
+                    setNewTagName("");
+                  }
+                }}
+                disabled={!newTagName.trim()}
+                className={`px-4 py-2 rounded-md text-white ${
+                  !newTagName.trim()
+                    ? "bg-blue-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                Add Tag
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Correspondent Modal */}
+      {isNewCorrespondentModalOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 flex flex-col">
+            <div className="p-4 border-b">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">Add New Correspondent</h2>
+                <button
+                  onClick={() => setIsNewCorrespondentModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Correspondent Name
+              </label>
+              <input
+                type="text"
+                value={newCorrespondentName}
+                onChange={(e) => setNewCorrespondentName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter correspondent name"
+              />
+            </div>
+            <div className="p-4 border-t flex justify-end space-x-2">
+              <button
+                onClick={() => setIsNewCorrespondentModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (newCorrespondentName.trim()) {
+                    // Create a new correspondent with a unique ID
+                    const newId = (
+                      Math.max(...correspondents.map((c) => parseInt(c.id))) + 1
+                    ).toString();
+                    const newCorrespondent = {
+                      id: newId,
+                      name: newCorrespondentName.trim(),
+                    };
+
+                    // Add the new correspondent to the list
+                    // In a real app, you'd save this to your backend
+
+                    // Select the new correspondent
+                    setSelectedCorrespondent(newId);
+
+                    // Close the modal and reset the input
+                    setIsNewCorrespondentModalOpen(false);
+                    setNewCorrespondentName("");
+                  }
+                }}
+                disabled={!newCorrespondentName.trim()}
+                className={`px-4 py-2 rounded-md text-white ${
+                  !newCorrespondentName.trim()
+                    ? "bg-blue-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                Add Correspondent
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Document Type Modal */}
+      {isNewDocTypeModalOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 flex flex-col">
+            <div className="p-4 border-b">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">Add New Document Type</h2>
+                <button
+                  onClick={() => setIsNewDocTypeModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Document Type Name
+              </label>
+              <input
+                type="text"
+                value={newDocTypeName}
+                onChange={(e) => setNewDocTypeName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter document type name"
+              />
+            </div>
+            <div className="p-4 border-t flex justify-end space-x-2">
+              <button
+                onClick={() => setIsNewDocTypeModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (newDocTypeName.trim()) {
+                    // Add the new document type to the list
+                    // In a real app, you'd save this to your backend
+
+                    // Select the new document type
+                    setDocumentType(newDocTypeName.trim());
+
+                    // Close the modal and reset the input
+                    setIsNewDocTypeModalOpen(false);
+                    setNewDocTypeName("");
+                  }
+                }}
+                disabled={!newDocTypeName.trim()}
+                className={`px-4 py-2 rounded-md text-white ${
+                  !newDocTypeName.trim()
+                    ? "bg-blue-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                Add Document Type
               </button>
             </div>
           </div>
