@@ -507,7 +507,7 @@ export default function ProjectDetail() {
       {/* Project Documents Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {filteredDocuments.map((doc) => (
-          <div key={doc.id} className="bg-[#1a1a1a] rounded-lg overflow-hidden">
+          <div key={doc.id} className="bg-blue-100 rounded-lg overflow-hidden">
             {/* Thumbnail */}
             <div className="relative aspect-[4/4] bg-gray-800">
               {doc.thumbnail ? (
@@ -536,7 +536,7 @@ export default function ProjectDetail() {
 
             {/* Document Info */}
             <div className="p-3">
-              <h3 className="text-white text-sm font-medium mb-1">
+              <h3 className="text-black text-sm font-medium mb-1">
                 {doc.title}
               </h3>
               <p className="text-gray-400 text-xs mb-3">{doc.date}</p>
@@ -563,7 +563,7 @@ export default function ProjectDetail() {
         <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
           <div
             ref={modalRef}
-            className="bg-white rounded-lg shadow-lg w-full max-w-5xl mx-4 flex flex-col"
+            className="bg-white rounded-lg shadow-lg w-[70%] mx-4 flex flex-col"
           >
             {/* Modal Header */}
             <div className="p-4 border-b">
@@ -581,8 +581,9 @@ export default function ProjectDetail() {
             {/* Modal Body - Split into two columns */}
             <div className="flex flex-1 overflow-hidden">
               {/* Left Column - Form */}
-              <div className="w-1/2 p-4 overflow-y-auto">
+              <div className="w-[60%] p-4 overflow-y-auto">
                 <div className="space-y-6">
+                  {/* Form content remains the same */}
                   {/* Row 1: Document Title */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -947,7 +948,7 @@ export default function ProjectDetail() {
               </div>
 
               {/* Right Column - Document Preview */}
-              <div className="w-1/2 border-l border-gray-200 p-4 overflow-hidden flex flex-col">
+              <div className="w-[40%] border-l border-gray-200 p-4 overflow-hidden flex flex-col">
                 <h3 className="text-lg font-medium mb-2">Document Preview</h3>
                 {selectedPreviewFile ? (
                   <div className="flex-1 overflow-hidden flex flex-col">
