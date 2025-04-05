@@ -81,10 +81,14 @@ export default function ProjectDetail() {
   // States for filtering and searching
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [selectedFinancialYear, setSelectedFinancialYear] =
+    useState<string>("");
+  const [isFinancialYearDropdownOpen, setIsFinancialYearDropdownOpen] =
+    useState(false);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [filterTagSearchTerm, setFilterTagSearchTerm] = useState("");
   const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const financialYearDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -95,12 +99,28 @@ export default function ProjectDetail() {
       ) {
         setIsTagDropdownOpen(false);
       }
+
+      if (
+        financialYearDropdownRef.current &&
+        !financialYearDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsFinancialYearDropdownOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Sample financial years
+  const financialYears = [
+    "AY - 2023-24",
+    "AY - 2024-25",
+    "AY - 2022-23",
+    "AY - 2021-22",
+    "AY - 2020-21",
+  ];
 
   // Sample project documents
   const documents = [
@@ -178,21 +198,33 @@ export default function ProjectDetail() {
       selectedTags.length === 0 ||
       selectedTags.some((tag) => doc.tags.includes(tag));
 
-    // Date range filter
+    // Financial Year filter
+    // For demonstration, we'll assume the document date can be used to determine the financial year
+    // In a real application, you would have a specific financial year field
     const docDate = new Date(doc.date);
-    const matchesDate =
-      !dateRange ||
-      (!dateRange.from && !dateRange.to) || // No date range selected
-      (dateRange.from && !dateRange.to && isSameDay(docDate, dateRange.from)) || // Only from date selected and matches
-      (dateRange.from &&
-        dateRange.to &&
-        isWithinInterval(docDate, {
-          start: dateRange.from,
-          end: dateRange.to,
-        })); // Date is within range
+    const docFinancialYear = getFinancialYearFromDate(docDate);
+    const matchesFinancialYear =
+      !selectedFinancialYear || docFinancialYear === selectedFinancialYear;
 
-    return matchesSearch && matchesTags && matchesDate;
+    return matchesSearch && matchesTags && matchesFinancialYear;
   });
+
+  // Helper function to determine financial year from date
+  function getFinancialYearFromDate(date: Date): string {
+    const month = date.getMonth();
+    const year = date.getFullYear();
+
+    // In India, financial year is from April to March
+    // If month is January to March, financial year is previous year to current year
+    // If month is April to December, financial year is current year to next year
+    if (month < 3) {
+      // January to March
+      return `AY - ${year - 1}-${year.toString().slice(-2)}`;
+    } else {
+      // April to December
+      return `AY - ${year}-${(year + 1).toString().slice(-2)}`;
+    }
+  }
 
   // Filter tags based on search term in the dropdown
   const filteredTags = allTags.filter((tag) =>
@@ -436,63 +468,57 @@ export default function ProjectDetail() {
           )}
         </div>
 
-        {/* Date Range Filter with Shadcn Calendar */}
-        <div>
-          <Popover>
-            <div className="relative flex">
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={`w-[300px] justify-start text-left font-normal ${
-                    !dateRange || !dateRange.from ? "text-muted-foreground" : ""
-                  }`}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange && dateRange.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "MMM d, yyyy")} -{" "}
-                        {format(dateRange.to, "MMM d, yyyy")}
-                      </>
-                    ) : (
-                      format(dateRange.from, "MMM d, yyyy")
-                    )
-                  ) : (
-                    "Select date range"
-                  )}
-                </Button>
-              </PopoverTrigger>
+        {/* Financial Year Dropdown */}
+        <div className="relative" ref={financialYearDropdownRef}>
+          <button
+            onClick={() =>
+              setIsFinancialYearDropdownOpen(!isFinancialYearDropdownOpen)
+            }
+            className="flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white min-w-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <span className="text-sm truncate">
+              {selectedFinancialYear || "Select Financial Year"}
+            </span>
+            <ChevronDown className="h-4 w-4 text-gray-500" />
+          </button>
 
-              {/* Clear button outside of the main button */}
-              {dateRange && (dateRange.from || dateRange.to) && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 z-10"
-                  onClick={() => setDateRange(undefined)}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
+          {isFinancialYearDropdownOpen && (
+            <div className="absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg">
+              <div className="max-h-60 overflow-y-auto">
+                {financialYears.map((year) => (
+                  <div
+                    key={year}
+                    className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
+                      selectedFinancialYear === year ? "bg-blue-50" : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedFinancialYear(
+                        year === selectedFinancialYear ? "" : year
+                      );
+                      setIsFinancialYearDropdownOpen(false);
+                    }}
+                  >
+                    <span className="text-sm">{year}</span>
+                  </div>
+                ))}
+              </div>
+
+              {selectedFinancialYear && (
+                <div className="border-t border-gray-200 mt-2 pt-2 flex justify-end px-2 pb-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedFinancialYear("");
+                      setIsFinancialYearDropdownOpen(false);
+                    }}
+                    className="text-xs text-blue-500 hover:text-blue-700"
+                  >
+                    Clear
+                  </button>
+                </div>
               )}
             </div>
-            <PopoverContent className="w-auto p-0 bg-white" align="start">
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={setDateRange}
-                initialFocus
-                numberOfMonths={2}
-                className="bg-white"
-                classNames={{
-                  day_range_start: "day-range-start !bg-blue-600 !text-white",
-                  day_range_end: "day-range-end !bg-blue-600 !text-white",
-                  day_selected: "!bg-blue-600 !text-white hover:!bg-blue-600",
-                  day_range_middle: "!bg-blue-100 !text-blue-800 rounded-none",
-                  cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has(.day-range-start)]:rounded-l-md [&:has(.day-range-end)]:rounded-r-md [&:has(.day-selected)]:bg-blue-100",
-                }}
-              />
-            </PopoverContent>
-          </Popover>
+          )}
         </div>
         {/* New Document Button - Opens modal */}
         <button
