@@ -83,7 +83,7 @@ export default function ProjectDetail() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
-  const [tagSearchTerm, setTagSearchTerm] = useState("");
+  const [filterTagSearchTerm, setFilterTagSearchTerm] = useState("");
   const tagDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -137,6 +137,26 @@ export default function ProjectDetail() {
   // Extract all unique tags
   const allTags = Array.from(new Set(documents.flatMap((doc) => doc.tags)));
 
+  // Sample correspondents data
+  const correspondents = [
+    { id: "1", name: "John Smith" },
+    { id: "2", name: "Jane Doe" },
+    { id: "3", name: "Robert Johnson" },
+    { id: "4", name: "Emily Davis" },
+    { id: "5", name: "Michael Brown" },
+  ];
+
+  // Sample document types
+  const documentTypes = [
+    "Invoice",
+    "Contract",
+    "Report",
+    "Proposal",
+    "Receipt",
+    "Letter",
+    "Memo",
+  ];
+
   // Filter documents based on search term and selected filters
   const filteredDocuments = documents.filter((doc) => {
     // Title search filter
@@ -167,7 +187,7 @@ export default function ProjectDetail() {
 
   // Filter tags based on search term in the dropdown
   const filteredTags = allTags.filter((tag) =>
-    tag.toLowerCase().includes(tagSearchTerm.toLowerCase())
+    tag.toLowerCase().includes(filterTagSearchTerm.toLowerCase())
   );
 
   // Toggle tag selection
@@ -182,6 +202,17 @@ export default function ProjectDetail() {
   const [newDocTitle, setNewDocTitle] = useState("");
   const [newDocTags, setNewDocTags] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
+  const [creationDate, setCreationDate] = useState<Date>(new Date());
+  const [selectedCorrespondent, setSelectedCorrespondent] = useState<string>("");
+  const [documentType, setDocumentType] = useState<string>("");
+  const [isCorrespondentDropdownOpen, setIsCorrespondentDropdownOpen] = useState(false);
+  const [correspondentSearchTerm, setCorrespondentSearchTerm] = useState("");
+  const [isDocTypeDropdownOpen, setIsDocTypeDropdownOpen] = useState(false);
+  const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
+  const [modalTagSearchTerm, setModalTagSearchTerm] = useState("");
+  const correspondentDropdownRef = useRef<HTMLDivElement>(null);
+  const documentTypeDropdownRef = useRef<HTMLDivElement>(null);
+  const tagsDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -209,9 +240,10 @@ export default function ProjectDetail() {
     );
   };
 
-  // Close modal when clicking outside
+  // Close modal and dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      // Close modal when clicking outside
       if (
         modalRef.current &&
         !modalRef.current.contains(event.target as Node) &&
@@ -219,12 +251,39 @@ export default function ProjectDetail() {
       ) {
         setIsNewDocModalOpen(false);
       }
+      
+      // Close correspondent dropdown when clicking outside
+      if (
+        correspondentDropdownRef.current &&
+        !correspondentDropdownRef.current.contains(event.target as Node) &&
+        isCorrespondentDropdownOpen
+      ) {
+        setIsCorrespondentDropdownOpen(false);
+      }
+      
+      // Close document type dropdown when clicking outside
+      if (
+        documentTypeDropdownRef.current &&
+        !documentTypeDropdownRef.current.contains(event.target as Node) &&
+        isDocTypeDropdownOpen
+      ) {
+        setIsDocTypeDropdownOpen(false);
+      }
+
+      // Close tags dropdown when clicking outside
+      if (
+        tagsDropdownRef.current &&
+        !tagsDropdownRef.current.contains(event.target as Node) &&
+        isTagsDropdownOpen
+      ) {
+        setIsTagsDropdownOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isNewDocModalOpen]);
+  }, [isNewDocModalOpen, isCorrespondentDropdownOpen, isDocTypeDropdownOpen, isTagsDropdownOpen]);
 
   return (
     <div>
@@ -279,8 +338,8 @@ export default function ProjectDetail() {
                   <input
                     type="text"
                     placeholder="Search tags"
-                    value={tagSearchTerm}
-                    onChange={(e) => setTagSearchTerm(e.target.value)}
+                    value={filterTagSearchTerm}
+                    onChange={(e) => setFilterTagSearchTerm(e.target.value)}
                     className="pl-3 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
@@ -491,44 +550,184 @@ export default function ProjectDetail() {
                   />
                 </div>
 
-                {/* Document Tags */}
+                {/* Document Tags - Multiselect Dropdown */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tags
                   </label>
-                  <div className="relative">
-                    <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-md min-h-[42px] mb-2">
-                      {newDocTags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded flex items-center"
-                        >
-                          {tag}
-                          <X
-                            className="ml-1 h-3 w-3 cursor-pointer"
-                            onClick={() => toggleNewDocTag(tag)}
-                          />
-                        </span>
-                      ))}
+                  <div className="relative" ref={tagsDropdownRef}>
+                    <div 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
+                      onClick={() => setIsTagsDropdownOpen(!isTagsDropdownOpen)}
+                    >
+                      <div className="flex flex-wrap gap-2 overflow-hidden">
+                        {newDocTags.length > 0 ? (
+                          newDocTags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded flex items-center"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {tag}
+                              <X
+                                className="ml-1 h-3 w-3 cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleNewDocTag(tag);
+                                }}
+                              />
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-500">Select tags...</span>
+                        )}
+                      </div>
+                      <ChevronDown className="h-4 w-4 ml-2 flex-shrink-0" />
                     </div>
-
-                    <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md">
-                      {allTags.map((tag) => (
-                        <div
-                          key={tag}
-                          className="flex items-center p-2 hover:bg-gray-100"
-                          onClick={() => toggleNewDocTag(tag)}
-                        >
+                    
+                    {isTagsDropdownOpen && (
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+                        <div className="p-2">
                           <input
-                            type="checkbox"
-                            checked={newDocTags.includes(tag)}
-                            onChange={() => {}}
-                            className="mr-2"
+                            type="text"
+                            value={modalTagSearchTerm}
+                            onChange={(e) => setModalTagSearchTerm(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Search tags..."
+                            onClick={(e) => e.stopPropagation()}
                           />
-                          <span className="text-sm cursor-pointer">{tag}</span>
                         </div>
-                      ))}
+                        <div className="max-h-60 overflow-y-auto">
+                          {allTags
+                            .filter(tag => tag.toLowerCase().includes(modalTagSearchTerm.toLowerCase()))
+                            .map((tag) => (
+                              <div
+                                key={tag}
+                                className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
+                                onClick={() => toggleNewDocTag(tag)}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={newDocTags.includes(tag)}
+                                  onChange={() => {}}
+                                  className="mr-2"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <span className="text-sm">{tag}</span>
+                              </div>
+                            ))}
+                          {allTags.filter(tag => tag.toLowerCase().includes(modalTagSearchTerm.toLowerCase())).length === 0 && (
+                            <div className="p-2 text-gray-500 text-center">No tags found</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Creation Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Creation Date
+                  </label>
+                  <input
+                    type="date"
+                    value={creationDate.toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      const newDate = e.target.value ? new Date(e.target.value) : new Date();
+                      setCreationDate(newDate);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Correspondent Dropdown */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Correspondent
+                  </label>
+                  <div className="relative" ref={correspondentDropdownRef}>
+                    <div 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
+                      onClick={() => setIsCorrespondentDropdownOpen(!isCorrespondentDropdownOpen)}
+                    >
+                      <span>
+                        {selectedCorrespondent
+                          ? correspondents.find((c) => c.id === selectedCorrespondent)?.name
+                          : "Select correspondent..."}
+                      </span>
+                      <ChevronDown className="h-4 w-4" />
                     </div>
+                    
+                    {isCorrespondentDropdownOpen && (
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+                        <div className="p-2">
+                          <input
+                            type="text"
+                            value={correspondentSearchTerm}
+                            onChange={(e) => setCorrespondentSearchTerm(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Search correspondents..."
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        <div className="max-h-60 overflow-y-auto">
+                          {correspondents
+                            .filter(c => c.name.toLowerCase().includes(correspondentSearchTerm.toLowerCase()))
+                            .map((correspondent) => (
+                              <div
+                                key={correspondent.id}
+                                className={`p-2 hover:bg-gray-100 cursor-pointer ${selectedCorrespondent === correspondent.id ? 'bg-blue-50' : ''}`}
+                                onClick={() => {
+                                  setSelectedCorrespondent(correspondent.id);
+                                  setIsCorrespondentDropdownOpen(false);
+                                  setCorrespondentSearchTerm("");
+                                }}
+                              >
+                                {correspondent.name}
+                              </div>
+                            ))}
+                            {correspondents.filter(c => c.name.toLowerCase().includes(correspondentSearchTerm.toLowerCase())).length === 0 && (
+                              <div className="p-2 text-gray-500 text-center">No correspondent found</div>
+                            )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Document Type Dropdown */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Document Type
+                  </label>
+                  <div className="relative" ref={documentTypeDropdownRef}>
+                    <div 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
+                      onClick={() => setIsDocTypeDropdownOpen(!isDocTypeDropdownOpen)}
+                    >
+                      <span>
+                        {documentType || "Select document type..."}
+                      </span>
+                      <ChevronDown className="h-4 w-4" />
+                    </div>
+                    
+                    {isDocTypeDropdownOpen && (
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {documentTypes.map((type) => (
+                          <div
+                            key={type}
+                            className={`p-2 hover:bg-gray-100 cursor-pointer ${documentType === type ? 'bg-blue-50' : ''}`}
+                            onClick={() => {
+                              setDocumentType(type);
+                              setIsDocTypeDropdownOpen(false);
+                            }}
+                          >
+                            {type}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -598,11 +797,17 @@ export default function ProjectDetail() {
                   console.log({
                     title: newDocTitle,
                     tags: newDocTags,
+                    creationDate,
+                    correspondent: selectedCorrespondent,
+                    documentType,
                     files,
                   });
                   setIsNewDocModalOpen(false);
                   setNewDocTitle("");
                   setNewDocTags([]);
+                  setCreationDate(new Date());
+                  setSelectedCorrespondent("");
+                  setDocumentType("");
                   setFiles([]);
                 }}
                 disabled={!newDocTitle || files.length === 0}

@@ -302,7 +302,7 @@ export default function Documents() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {filteredDocuments.map((doc) => (
-          <div key={doc.id} className="bg-[#1a1a1a] rounded-lg overflow-hidden">
+          <div key={doc.id} className="bg-blue-100 rounded-lg overflow-hidden">
             {/* Thumbnail */}
             <div className="relative aspect-[4/4] bg-gray-800">
               {doc.thumbnail ? (
@@ -331,7 +331,7 @@ export default function Documents() {
 
             {/* Document Info */}
             <div className="p-3">
-              <h3 className="text-white text-sm font-medium mb-1">
+              <h3 className="text-black text-sm font-medium mb-1">
                 {doc.title}
               </h3>
               <p className="text-gray-400 text-xs mb-3">{doc.date}</p>
