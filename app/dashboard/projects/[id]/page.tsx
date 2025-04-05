@@ -204,6 +204,7 @@ export default function ProjectDetail() {
   const [files, setFiles] = useState<File[]>([]);
   const [selectedPreviewFile, setSelectedPreviewFile] = useState<File | null>(null);
   const [creationDate, setCreationDate] = useState<Date>(new Date());
+  const [notes, setNotes] = useState<string>("");
   const [selectedCorrespondent, setSelectedCorrespondent] = useState<string>("");
   const [documentType, setDocumentType] = useState<string>("");
   const [isCorrespondentDropdownOpen, setIsCorrespondentDropdownOpen] = useState(false);
@@ -752,7 +753,20 @@ export default function ProjectDetail() {
                     </div>
                   </div>
 
-                  {/* Row 4: File Upload */}
+                  {/* Row 4: Notes */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Notes
+                    </label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-vertical"
+                      placeholder="Add notes about this document..."
+                    />
+                  </div>
+
+                  {/* Row 5: File Upload */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Files
@@ -877,6 +891,7 @@ export default function ProjectDetail() {
                     creationDate,
                     correspondent: selectedCorrespondent,
                     documentType,
+                    notes,
                     files,
                   });
                   setIsNewDocModalOpen(false);
@@ -885,6 +900,7 @@ export default function ProjectDetail() {
                   setCreationDate(new Date());
                   setSelectedCorrespondent("");
                   setDocumentType("");
+                  setNotes("");
                   setFiles([]);
                   setSelectedPreviewFile(null);
                 }}
