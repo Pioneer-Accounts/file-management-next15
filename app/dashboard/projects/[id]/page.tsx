@@ -518,7 +518,7 @@ export default function ProjectDetail() {
         <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
           <div
             ref={modalRef}
-            className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4"
+            className="bg-white rounded-lg shadow-lg w-full max-w-2xl mx-4"
           >
             {/* Modal Header */}
             <div className="p-4 border-b">
@@ -535,8 +535,8 @@ export default function ProjectDetail() {
 
             {/* Modal Body */}
             <div className="p-4">
-              <div className="space-y-4">
-                {/* Document Title */}
+              <div className="space-y-6">
+                {/* Row 1: Document Title */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Title
@@ -550,188 +550,194 @@ export default function ProjectDetail() {
                   />
                 </div>
 
-                {/* Document Tags - Multiselect Dropdown */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tags
-                  </label>
-                  <div className="relative" ref={tagsDropdownRef}>
-                    <div 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
-                      onClick={() => setIsTagsDropdownOpen(!isTagsDropdownOpen)}
-                    >
-                      <div className="flex flex-wrap gap-2 overflow-hidden">
-                        {newDocTags.length > 0 ? (
-                          newDocTags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded flex items-center"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {tag}
-                              <X
-                                className="ml-1 h-3 w-3 cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleNewDocTag(tag);
-                                }}
-                              />
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-gray-500">Select tags...</span>
-                        )}
-                      </div>
-                      <ChevronDown className="h-4 w-4 ml-2 flex-shrink-0" />
-                    </div>
-                    
-                    {isTagsDropdownOpen && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-                        <div className="p-2">
-                          <input
-                            type="text"
-                            value={modalTagSearchTerm}
-                            onChange={(e) => setModalTagSearchTerm(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Search tags..."
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                        <div className="max-h-60 overflow-y-auto">
-                          {allTags
-                            .filter(tag => tag.toLowerCase().includes(modalTagSearchTerm.toLowerCase()))
-                            .map((tag) => (
-                              <div
+                {/* Row 2: Tags and Creation Date */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Document Tags */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tags
+                    </label>
+                    <div className="relative" ref={tagsDropdownRef}>
+                      <div 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
+                        onClick={() => setIsTagsDropdownOpen(!isTagsDropdownOpen)}
+                      >
+                        <div className="flex flex-wrap gap-2 overflow-hidden">
+                          {newDocTags.length > 0 ? (
+                            newDocTags.map((tag) => (
+                              <span
                                 key={tag}
-                                className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
-                                onClick={() => toggleNewDocTag(tag)}
+                                className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded flex items-center"
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                <input
-                                  type="checkbox"
-                                  checked={newDocTags.includes(tag)}
-                                  onChange={() => {}}
-                                  className="mr-2"
-                                  onClick={(e) => e.stopPropagation()}
+                                {tag}
+                                <X
+                                  className="ml-1 h-3 w-3 cursor-pointer"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleNewDocTag(tag);
+                                  }}
                                 />
-                                <span className="text-sm">{tag}</span>
-                              </div>
-                            ))}
-                          {allTags.filter(tag => tag.toLowerCase().includes(modalTagSearchTerm.toLowerCase())).length === 0 && (
-                            <div className="p-2 text-gray-500 text-center">No tags found</div>
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-500">Select tags...</span>
                           )}
                         </div>
+                        <ChevronDown className="h-4 w-4 ml-2 flex-shrink-0" />
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Creation Date */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Creation Date
-                  </label>
-                  <input
-                    type="date"
-                    value={creationDate.toISOString().split('T')[0]}
-                    onChange={(e) => {
-                      const newDate = e.target.value ? new Date(e.target.value) : new Date();
-                      setCreationDate(newDate);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Correspondent Dropdown */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Correspondent
-                  </label>
-                  <div className="relative" ref={correspondentDropdownRef}>
-                    <div 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
-                      onClick={() => setIsCorrespondentDropdownOpen(!isCorrespondentDropdownOpen)}
-                    >
-                      <span>
-                        {selectedCorrespondent
-                          ? correspondents.find((c) => c.id === selectedCorrespondent)?.name
-                          : "Select correspondent..."}
-                      </span>
-                      <ChevronDown className="h-4 w-4" />
-                    </div>
-                    
-                    {isCorrespondentDropdownOpen && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-                        <div className="p-2">
-                          <input
-                            type="text"
-                            value={correspondentSearchTerm}
-                            onChange={(e) => setCorrespondentSearchTerm(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Search correspondents..."
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                        <div className="max-h-60 overflow-y-auto">
-                          {correspondents
-                            .filter(c => c.name.toLowerCase().includes(correspondentSearchTerm.toLowerCase()))
-                            .map((correspondent) => (
-                              <div
-                                key={correspondent.id}
-                                className={`p-2 hover:bg-gray-100 cursor-pointer ${selectedCorrespondent === correspondent.id ? 'bg-blue-50' : ''}`}
-                                onClick={() => {
-                                  setSelectedCorrespondent(correspondent.id);
-                                  setIsCorrespondentDropdownOpen(false);
-                                  setCorrespondentSearchTerm("");
-                                }}
-                              >
-                                {correspondent.name}
-                              </div>
-                            ))}
-                            {correspondents.filter(c => c.name.toLowerCase().includes(correspondentSearchTerm.toLowerCase())).length === 0 && (
-                              <div className="p-2 text-gray-500 text-center">No correspondent found</div>
-                            )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Document Type Dropdown */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Document Type
-                  </label>
-                  <div className="relative" ref={documentTypeDropdownRef}>
-                    <div 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
-                      onClick={() => setIsDocTypeDropdownOpen(!isDocTypeDropdownOpen)}
-                    >
-                      <span>
-                        {documentType || "Select document type..."}
-                      </span>
-                      <ChevronDown className="h-4 w-4" />
-                    </div>
-                    
-                    {isDocTypeDropdownOpen && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        {documentTypes.map((type) => (
-                          <div
-                            key={type}
-                            className={`p-2 hover:bg-gray-100 cursor-pointer ${documentType === type ? 'bg-blue-50' : ''}`}
-                            onClick={() => {
-                              setDocumentType(type);
-                              setIsDocTypeDropdownOpen(false);
-                            }}
-                          >
-                            {type}
+                      
+                      {isTagsDropdownOpen && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+                          <div className="p-2">
+                            <input
+                              type="text"
+                              value={modalTagSearchTerm}
+                              onChange={(e) => setModalTagSearchTerm(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Search tags..."
+                              onClick={(e) => e.stopPropagation()}
+                            />
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          <div className="max-h-60 overflow-y-auto">
+                            {allTags
+                              .filter(tag => tag.toLowerCase().includes(modalTagSearchTerm.toLowerCase()))
+                              .map((tag) => (
+                                <div
+                                  key={tag}
+                                  className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
+                                  onClick={() => toggleNewDocTag(tag)}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={newDocTags.includes(tag)}
+                                    onChange={() => {}}
+                                    className="mr-2"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                  <span className="text-sm">{tag}</span>
+                                </div>
+                              ))}
+                            {allTags.filter(tag => tag.toLowerCase().includes(modalTagSearchTerm.toLowerCase())).length === 0 && (
+                              <div className="p-2 text-gray-500 text-center">No tags found</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Creation Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Creation Date
+                    </label>
+                    <input
+                      type="date"
+                      value={creationDate.toISOString().split('T')[0]}
+                      onChange={(e) => {
+                        const newDate = e.target.value ? new Date(e.target.value) : new Date();
+                        setCreationDate(newDate);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
                 </div>
 
-                {/* File Upload */}
+                {/* Row 3: Correspondent and Document Type */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Correspondent Dropdown */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Correspondent
+                    </label>
+                    <div className="relative" ref={correspondentDropdownRef}>
+                      <div 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
+                        onClick={() => setIsCorrespondentDropdownOpen(!isCorrespondentDropdownOpen)}
+                      >
+                        <span>
+                          {selectedCorrespondent
+                            ? correspondents.find((c) => c.id === selectedCorrespondent)?.name
+                            : "Select correspondent..."}
+                        </span>
+                        <ChevronDown className="h-4 w-4" />
+                      </div>
+                      
+                      {isCorrespondentDropdownOpen && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+                          <div className="p-2">
+                            <input
+                              type="text"
+                              value={correspondentSearchTerm}
+                              onChange={(e) => setCorrespondentSearchTerm(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Search correspondents..."
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div className="max-h-60 overflow-y-auto">
+                            {correspondents
+                              .filter(c => c.name.toLowerCase().includes(correspondentSearchTerm.toLowerCase()))
+                              .map((correspondent) => (
+                                <div
+                                  key={correspondent.id}
+                                  className={`p-2 hover:bg-gray-100 cursor-pointer ${selectedCorrespondent === correspondent.id ? 'bg-blue-50' : ''}`}
+                                  onClick={() => {
+                                    setSelectedCorrespondent(correspondent.id);
+                                    setIsCorrespondentDropdownOpen(false);
+                                    setCorrespondentSearchTerm("");
+                                  }}
+                                >
+                                  {correspondent.name}
+                                </div>
+                              ))}
+                              {correspondents.filter(c => c.name.toLowerCase().includes(correspondentSearchTerm.toLowerCase())).length === 0 && (
+                                <div className="p-2 text-gray-500 text-center">No correspondent found</div>
+                              )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Document Type Dropdown */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Document Type
+                    </label>
+                    <div className="relative" ref={documentTypeDropdownRef}>
+                      <div 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
+                        onClick={() => setIsDocTypeDropdownOpen(!isDocTypeDropdownOpen)}
+                      >
+                        <span>
+                          {documentType || "Select document type..."}
+                        </span>
+                        <ChevronDown className="h-4 w-4" />
+                      </div>
+                      
+                      {isDocTypeDropdownOpen && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                          {documentTypes.map((type) => (
+                            <div
+                              key={type}
+                              className={`p-2 hover:bg-gray-100 cursor-pointer ${documentType === type ? 'bg-blue-50' : ''}`}
+                              onClick={() => {
+                                setDocumentType(type);
+                                setIsDocTypeDropdownOpen(false);
+                              }}
+                            >
+                              {type}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 4: File Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Files
