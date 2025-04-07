@@ -81,6 +81,7 @@ export default function ProjectDetailPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
+  const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
   const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
 
   // Sample financial years
@@ -183,8 +184,15 @@ export default function ProjectDetailPage() {
     const docFinancialYear = getFinancialYearFromDate(docDate);
     const matchesFinancialYear =
       !selectedFinancialYear || docFinancialYear === selectedFinancialYear;
+      
+    // Document Type filter
+    // For demonstration, we'll assume each document has a type property
+    // In a real application, you would have this data
+    const docType = doc.id % 2 === 0 ? "Invoice" : "Contract"; // Mock document type based on ID
+    const matchesDocumentType = 
+      !selectedDocumentType || docType === selectedDocumentType;
 
-    return matchesSearch && matchesTags && matchesFinancialYear;
+    return matchesSearch && matchesTags && matchesFinancialYear && matchesDocumentType;
   });
 
   return (
@@ -200,9 +208,12 @@ export default function ProjectDetailPage() {
         setSelectedTags={setSelectedTags}
         selectedFinancialYear={selectedFinancialYear}
         setSelectedFinancialYear={setSelectedFinancialYear}
+        selectedDocumentType={selectedDocumentType}
+        setSelectedDocumentType={setSelectedDocumentType}
         onNewDocument={() => setIsNewDocModalOpen(true)}
         allTags={allTags}
         financialYears={financialYears}
+        documentTypes={documentTypes}
       />
       
       {/* Project Documents Grid */}

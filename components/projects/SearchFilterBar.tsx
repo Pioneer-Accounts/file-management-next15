@@ -10,9 +10,12 @@ interface SearchFilterBarProps {
   setSelectedTags: React.Dispatch<React.SetStateAction<string[]>>;
   selectedFinancialYear: string;
   setSelectedFinancialYear: (year: string) => void;
+  selectedDocumentType: string;
+  setSelectedDocumentType: (type: string) => void;
   onNewDocument: () => void;
   allTags: string[];
   financialYears: string[];
+  documentTypes: string[];
 }
 
 export function SearchFilterBar({
@@ -22,16 +25,21 @@ export function SearchFilterBar({
   setSelectedTags,
   selectedFinancialYear,
   setSelectedFinancialYear,
+  selectedDocumentType,
+  setSelectedDocumentType,
   onNewDocument,
   allTags,
   financialYears,
+  documentTypes,
 }: SearchFilterBarProps) {
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [isFinancialYearDropdownOpen, setIsFinancialYearDropdownOpen] = useState(false);
+  const [isDocumentTypeDropdownOpen, setIsDocumentTypeDropdownOpen] = useState(false);
   const [filterTagSearchTerm, setFilterTagSearchTerm] = useState("");
   
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   const financialYearDropdownRef = useRef<HTMLDivElement>(null);
+  const documentTypeDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -48,6 +56,13 @@ export function SearchFilterBar({
         !financialYearDropdownRef.current.contains(event.target as Node)
       ) {
         setIsFinancialYearDropdownOpen(false);
+      }
+      
+      if (
+        documentTypeDropdownRef.current &&
+        !documentTypeDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDocumentTypeDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -203,6 +218,60 @@ export function SearchFilterBar({
                     e.stopPropagation();
                     setSelectedFinancialYear("");
                     setIsFinancialYearDropdownOpen(false);
+                  }}
+                  className="text-xs text-blue-500 hover:text-blue-700"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Document Type Dropdown */}
+      <div className="relative" ref={documentTypeDropdownRef}>
+        <button
+          onClick={() =>
+            setIsDocumentTypeDropdownOpen(!isDocumentTypeDropdownOpen)
+          }
+          className="flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white min-w-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <span className="text-sm truncate">
+            {selectedDocumentType || "Select Document Type"}
+          </span>
+          <ChevronDown className="h-4 w-4 text-gray-500" />
+        </button>
+
+        {isDocumentTypeDropdownOpen && (
+          <div className="absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg">
+            <div className="max-h-60 overflow-y-auto">
+              {documentTypes.map((type) => (
+                <div
+                  key={type}
+                  className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
+                    selectedDocumentType === type ? "bg-blue-50" : ""
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedDocumentType(
+                      type === selectedDocumentType ? "" : type
+                    );
+                    setIsDocumentTypeDropdownOpen(false);
+                  }}
+                >
+                  <span className="text-sm">{type}</span>
+                </div>
+              ))}
+            </div>
+
+            {selectedDocumentType && (
+              <div className="border-t border-gray-200 mt-2 pt-2 flex justify-end px-2 pb-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedDocumentType("");
+                    setIsDocumentTypeDropdownOpen(false);
                   }}
                   className="text-xs text-blue-500 hover:text-blue-700"
                 >

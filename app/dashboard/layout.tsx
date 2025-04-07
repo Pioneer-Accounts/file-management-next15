@@ -15,7 +15,7 @@ export default function DashboardLayout({
   const menuItems = [
     { icon: Home, label: "Home", href: "/dashboard" },
     { icon: FileText, label: "Documents", href: "/dashboard/documents" },
-    { icon: FolderOpen, label: "Projects", href: "/dashboard/projects" },
+    { icon: FolderOpen, label: "Jobs", href: "/dashboard/projects" },
   ];
 
   return (
