@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   FolderOpen,
@@ -27,8 +27,27 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(true);
+
+  // Handle logout function
+  const handleLogout = () => {
+    // Clear tokens from localStorage
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    
+    // Clear tokens from cache/cookies if using them
+    document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    
+    // Clear any session storage if used
+    sessionStorage.removeItem("accessToken");
+    sessionStorage.removeItem("refreshToken");
+    
+    // Redirect to login page
+    router.push("/signin");
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -233,7 +252,12 @@ export default function DashboardLayout({
               <p className="text-sm font-medium text-gray-800">John Doe</p>
               <p className="text-xs text-gray-500">john.doe@example.com</p>
             </div>
-            <button className="ml-auto p-1 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+            <button
+              onClick={handleLogout}
+              className="ml-auto p-1 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              aria-label="Logout"
+              title="Logout"
+            >
               <LogOut size={18} />
             </button>
           </div>
