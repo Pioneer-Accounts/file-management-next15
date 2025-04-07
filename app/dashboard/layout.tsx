@@ -19,6 +19,8 @@ import {
   Calendar,
   Bell,
   User,
+  Tag,
+  FileType,
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -30,6 +32,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(true);
+  const [isSystemSetupExpanded, setIsSystemSetupExpanded] = useState(true);
 
   // Handle logout function
   const handleLogout = () => {
@@ -237,6 +240,61 @@ export default function DashboardLayout({
               />
               Users
             </Link>
+
+            {/* System Setup Dropdown */}
+            <div>
+              <button
+                onClick={() => setIsSystemSetupExpanded(!isSystemSetupExpanded)}
+                className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-md group ${
+                  pathname.includes("/dashboard/system-setup")
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <div className="flex items-center">
+                  <Settings
+                    className={`mr-3 h-5 w-5 ${
+                      pathname.includes("/dashboard/system-setup")
+                        ? "text-blue-600"
+                        : "text-gray-500 group-hover:text-gray-600"
+                    }`}
+                  />
+                  System Setup
+                </div>
+                {isSystemSetupExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+
+              {isSystemSetupExpanded && (
+                <div className="ml-10 mt-1 space-y-1">
+                  <Link
+                    href="/dashboard/system-setup/add-tags"
+                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+                      pathname === "/dashboard/system-setup/add-tags"
+                        ? "text-blue-700"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
+                    }`}
+                  >
+                    <Tag className="mr-2 h-4 w-4" />
+                    Add Tags
+                  </Link>
+                  <Link
+                    href="/dashboard/system-setup/add-document-type"
+                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+                      pathname === "/dashboard/system-setup/add-document-type"
+                        ? "text-blue-700"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
+                    }`}
+                  >
+                    <FileType className="mr-2 h-4 w-4" />
+                    Add Document Type
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Divider */}
