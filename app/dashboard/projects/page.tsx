@@ -20,8 +20,10 @@ import Link from "next/link";
 export default function Projects() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
-  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
-  const [isFinancialYearDropdownOpen, setIsFinancialYearDropdownOpen] = useState(false);
+  const [selectedFinancialYear, setSelectedFinancialYear] =
+    useState<string>("");
+  const [isFinancialYearDropdownOpen, setIsFinancialYearDropdownOpen] =
+    useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const financialYearDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +42,10 @@ export default function Projects() {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setActiveMenu(null);
       }
-      if (financialYearDropdownRef.current && !financialYearDropdownRef.current.contains(event.target as Node)) {
+      if (
+        financialYearDropdownRef.current &&
+        !financialYearDropdownRef.current.contains(event.target as Node)
+      ) {
         setIsFinancialYearDropdownOpen(false);
       }
     }
@@ -118,11 +123,13 @@ export default function Projects() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
+
           {/* Financial Year Dropdown */}
           <div className="relative" ref={financialYearDropdownRef}>
             <button
-              onClick={() => setIsFinancialYearDropdownOpen(!isFinancialYearDropdownOpen)}
+              onClick={() =>
+                setIsFinancialYearDropdownOpen(!isFinancialYearDropdownOpen)
+              }
               className="flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white min-w-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <span className="text-sm truncate">
@@ -141,7 +148,9 @@ export default function Projects() {
                         selectedFinancialYear === year ? "bg-blue-50" : ""
                       }`}
                       onClick={() => {
-                        setSelectedFinancialYear(year === selectedFinancialYear ? "" : year);
+                        setSelectedFinancialYear(
+                          year === selectedFinancialYear ? "" : year
+                        );
                         setIsFinancialYearDropdownOpen(false);
                       }}
                     >
@@ -149,7 +158,7 @@ export default function Projects() {
                     </div>
                   ))}
                 </div>
-                
+
                 {selectedFinancialYear && (
                   <div className="border-t border-gray-200 mt-2 pt-2 flex justify-end px-2 pb-2">
                     <button
@@ -168,7 +177,7 @@ export default function Projects() {
             )}
           </div>
         </div>
-        
+
         <button className="ml-4 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
           <Plus className="h-4 w-4" />
           <span>New Jobs</span>
@@ -225,7 +234,7 @@ export default function Projects() {
                     <Edit2 className="h-4 w-4 text-gray-500" />
                     <span>Edit</span>
                   </button>
-                  <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-red-500 hover:text-red-700">
+                  <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-gray-100 hover:text-red-700">
                     <Trash2 className="h-4 w-4" />
                     <span>Delete</span>
                   </button>
