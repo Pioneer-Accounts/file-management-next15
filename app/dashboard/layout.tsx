@@ -21,6 +21,7 @@ import {
   User,
   Tag,
   FileType,
+  ChevronLeft,
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -31,6 +32,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(true);
   const [isSystemSetupExpanded, setIsSystemSetupExpanded] = useState(true);
 
@@ -60,28 +62,49 @@ export default function DashboardLayout({
       <div
         className={`fixed inset-y-0 left-0 z-50 transform ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } transition-transform duration-300 ease-in-out md:relative md:translate-x-0 bg-white border-r border-gray-200 flex flex-col`}
+        } transition-all duration-300 ease-in-out md:relative md:translate-x-0 bg-white border-r border-gray-200 flex flex-col`}
         style={{
-          width: isSidebarOpen ? "280px" : "0",
-          minWidth: isSidebarOpen ? "280px" : "0",
+          width: isSidebarOpen ? (isCollapsed ? "80px" : "280px") : "0",
+          minWidth: isSidebarOpen ? (isCollapsed ? "80px" : "280px") : "0",
         }}
       >
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-          <Link href="/dashboard" className="flex items-center space-x-2">
-            <div className="bg-blue-600 text-white p-1.5 rounded">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+          {!isCollapsed && (
+            <Link href="/dashboard" className="flex items-center space-x-2">
+              <div className="bg-blue-600 text-white p-1.5 rounded">
+                <FileText size={20} />
+              </div>
+              <span className="text-xl font-semibold text-gray-800">
+                FileManager
+              </span>
+            </Link>
+          )}
+          {isCollapsed && (
+            <div className="mx-auto bg-blue-600 text-white p-1.5 rounded">
               <FileText size={20} />
             </div>
-            <span className="text-xl font-semibold text-gray-800">
-              FileManager
-            </span>
-          </Link>
-          <button
-            onClick={() => setIsSidebarOpen(false)}
-            className="p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 md:hidden"
-          >
-            <X size={20} />
-          </button>
+          )}
+          <div className="flex items-center">
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            >
+              {isCollapsed ? (
+                <ChevronRight size={20} />
+              ) : (
+                <ChevronLeft size={20} />
+              )}
+            </button>
+            {!isCollapsed && (
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="ml-2 p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 md:hidden"
+              >
+                <X size={20} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Sidebar Content */}
@@ -89,69 +112,86 @@ export default function DashboardLayout({
           <nav className="space-y-1">
             <Link
               href="/dashboard"
-              className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md group ${
+              className={`flex items-center ${
+                isCollapsed ? "justify-center" : "px-3"
+              } py-2.5 text-sm font-medium rounded-md group ${
                 pathname === "/dashboard"
                   ? "bg-blue-50 text-blue-700"
                   : "text-gray-700 hover:bg-gray-100"
               }`}
+              title="Dashboard"
             >
               <Home
-                className={`mr-3 h-5 w-5 ${
+                className={`${
+                  isCollapsed ? "" : "mr-3"
+                } h-5 w-5 ${
                   pathname === "/dashboard"
                     ? "text-blue-600"
                     : "text-gray-500 group-hover:text-gray-600"
                 }`}
               />
-              Dashboard
+              {!isCollapsed && "Dashboard"}
             </Link>
 
             {/* Documents Link */}
             <Link
               href="/dashboard/documents"
-              className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md group ${
+              className={`flex items-center ${
+                isCollapsed ? "justify-center" : "px-3"
+              } py-2.5 text-sm font-medium rounded-md group ${
                 pathname === "/dashboard/documents"
                   ? "bg-blue-50 text-blue-700"
                   : "text-gray-700 hover:bg-gray-100"
               }`}
+              title="Documents"
             >
               <FileText
-                className={`mr-3 h-5 w-5 ${
+                className={`${
+                  isCollapsed ? "" : "mr-3"
+                } h-5 w-5 ${
                   pathname === "/dashboard/documents"
                     ? "text-blue-600"
                     : "text-gray-500 group-hover:text-gray-600"
                 }`}
               />
-              Documents
+              {!isCollapsed && "Documents"}
             </Link>
 
             {/* Projects Section with Dropdown */}
             <div>
               <button
                 onClick={() => setIsProjectsExpanded(!isProjectsExpanded)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-md group ${
+                className={`w-full flex items-center ${
+                  isCollapsed ? "justify-center" : "justify-between px-3"
+                } py-2.5 text-sm font-medium rounded-md group ${
                   pathname.includes("/dashboard/projects")
                     ? "bg-blue-50 text-blue-700"
                     : "text-gray-700 hover:bg-gray-100"
                 }`}
+                title="Jobs"
               >
                 <div className="flex items-center">
                   <FolderOpen
-                    className={`mr-3 h-5 w-5 ${
+                    className={`${
+                      isCollapsed ? "" : "mr-3"
+                    } h-5 w-5 ${
                       pathname.includes("/dashboard/projects")
                         ? "text-blue-600"
                         : "text-gray-500 group-hover:text-gray-600"
                     }`}
                   />
-                  Jobs
+                  {!isCollapsed && "Jobs"}
                 </div>
-                {isProjectsExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
+                {!isCollapsed && (
+                  isProjectsExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )
                 )}
               </button>
 
-              {isProjectsExpanded && (
+              {isProjectsExpanded && !isCollapsed && (
                 <div className="ml-10 mt-1 space-y-1">
                   <Link
                     href="/dashboard/projects"
@@ -163,112 +203,68 @@ export default function DashboardLayout({
                   >
                     All Jobs
                   </Link>
-                  {/* <Link
-                    href="/dashboard/projects/recent"
-                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                      pathname === "/dashboard/projects/recent"
-                        ? "text-blue-700"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
-                    }`}
-                  >
-                    Recent
-                  </Link> */}
-                  {/* <Link
-                    href="/dashboard/projects/archived"
-                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                      pathname === "/dashboard/projects/archived"
-                        ? "text-blue-700"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
-                    }`}
-                  >
-                    Archived
-                  </Link> */}
                 </div>
               )}
             </div>
 
-            {/* <Link
-              href="/dashboard/analytics"
-              className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md group ${
-                pathname === "/dashboard/analytics"
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <BarChart2
-                className={`mr-3 h-5 w-5 ${
-                  pathname === "/dashboard/analytics"
-                    ? "text-blue-600"
-                    : "text-gray-500 group-hover:text-gray-600"
-                }`}
-              />
-              Analytics
-            </Link> */}
-
-            {/* <Link
-              href="/dashboard/calendar"
-              className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md group ${
-                pathname === "/dashboard/calendar"
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <Calendar
-                className={`mr-3 h-5 w-5 ${
-                  pathname === "/dashboard/calendar"
-                    ? "text-blue-600"
-                    : "text-gray-500 group-hover:text-gray-600"
-                }`}
-              />
-              Calendar
-            </Link> */}
-
             <Link
               href="/dashboard/users"
-              className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md group ${
+              className={`flex items-center ${
+                isCollapsed ? "justify-center" : "px-3"
+              } py-2.5 text-sm font-medium rounded-md group ${
                 pathname === "/dashboard/users"
                   ? "bg-blue-50 text-blue-700"
                   : "text-gray-700 hover:bg-gray-100"
               }`}
+              title="Users"
             >
               <Users
-                className={`mr-3 h-5 w-5 ${
+                className={`${
+                  isCollapsed ? "" : "mr-3"
+                } h-5 w-5 ${
                   pathname === "/dashboard/users"
                     ? "text-blue-600"
                     : "text-gray-500 group-hover:text-gray-600"
                 }`}
               />
-              Users
+              {!isCollapsed && "Users"}
             </Link>
 
             {/* System Setup Dropdown */}
             <div>
               <button
                 onClick={() => setIsSystemSetupExpanded(!isSystemSetupExpanded)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-md group ${
+                className={`w-full flex items-center ${
+                  isCollapsed ? "justify-center" : "justify-between px-3"
+                } py-2.5 text-sm font-medium rounded-md group ${
                   pathname.includes("/dashboard/system-setup")
                     ? "bg-blue-50 text-blue-700"
                     : "text-gray-700 hover:bg-gray-100"
                 }`}
+                title="System Setup"
               >
                 <div className="flex items-center">
                   <Settings
-                    className={`mr-3 h-5 w-5 ${
+                    className={`${
+                      isCollapsed ? "" : "mr-3"
+                    } h-5 w-5 ${
                       pathname.includes("/dashboard/system-setup")
                         ? "text-blue-600"
                         : "text-gray-500 group-hover:text-gray-600"
                     }`}
                   />
-                  System Setup
+                  {!isCollapsed && "System Setup"}
                 </div>
-                {isSystemSetupExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
+                {!isCollapsed && (
+                  isSystemSetupExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )
                 )}
               </button>
 
-              {isSystemSetupExpanded && (
+              {isSystemSetupExpanded && !isCollapsed && (
                 <div className="ml-10 mt-1 space-y-1">
                   <Link
                     href="/dashboard/system-setup/add-tags"
@@ -304,42 +300,69 @@ export default function DashboardLayout({
           <nav className="space-y-1">
             <Link
               href="/dashboard/settings"
-              className="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 group"
+              className={`flex items-center ${
+                isCollapsed ? "justify-center" : "px-3"
+              } py-2.5 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 group`}
+              title="Settings"
             >
-              <Settings className="mr-3 h-5 w-5 text-gray-500 group-hover:text-gray-600" />
-              Settings
+              <Settings 
+                className={`${
+                  isCollapsed ? "" : "mr-3"
+                } h-5 w-5 text-gray-500 group-hover:text-gray-600`} 
+              />
+              {!isCollapsed && "Settings"}
             </Link>
             <Link
               href="/dashboard/help"
-              className="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 group"
+              className={`flex items-center ${
+                isCollapsed ? "justify-center" : "px-3"
+              } py-2.5 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 group`}
+              title="Help & Support"
             >
-              <HelpCircle className="mr-3 h-5 w-5 text-gray-500 group-hover:text-gray-600" />
-              Help & Support
+              <HelpCircle 
+                className={`${
+                  isCollapsed ? "" : "mr-3"
+                } h-5 w-5 text-gray-500 group-hover:text-gray-600`} 
+              />
+              {!isCollapsed && "Help & Support"}
             </Link>
           </nav>
         </div>
 
         {/* User Profile */}
         <div className="border-t border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                <User size={18} />
+          {isCollapsed ? (
+            <div className="flex justify-center">
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                aria-label="Logout"
+                title="Logout"
+              >
+                <LogOut size={20} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                  <User size={18} />
+                </div>
               </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-800">John Doe</p>
+                <p className="text-xs text-gray-500">john.doe@example.com</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="ml-auto p-1 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                aria-label="Logout"
+                title="Logout"
+              >
+                <LogOut size={18} />
+              </button>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-800">John Doe</p>
-              <p className="text-xs text-gray-500">john.doe@example.com</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="ml-auto p-1 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-              aria-label="Logout"
-              title="Logout"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
+          )}
         </div>
       </div>
 
