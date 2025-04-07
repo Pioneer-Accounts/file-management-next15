@@ -36,15 +36,17 @@ export default function DashboardLayout({
     // Clear tokens from localStorage
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
-    
+
     // Clear tokens from cache/cookies if using them
-    document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    
+    document.cookie =
+      "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie =
+      "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
     // Clear any session storage if used
     sessionStorage.removeItem("accessToken");
     sessionStorage.removeItem("refreshToken");
-    
+
     // Redirect to login page
     router.push("/signin");
   };
@@ -100,6 +102,25 @@ export default function DashboardLayout({
               Dashboard
             </Link>
 
+            {/* Documents Link */}
+            <Link
+              href="/dashboard/documents"
+              className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md group ${
+                pathname === "/dashboard/documents"
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <FileText
+                className={`mr-3 h-5 w-5 ${
+                  pathname === "/dashboard/documents"
+                    ? "text-blue-600"
+                    : "text-gray-500 group-hover:text-gray-600"
+                }`}
+              />
+              Documents
+            </Link>
+
             {/* Projects Section with Dropdown */}
             <div>
               <button
@@ -139,7 +160,7 @@ export default function DashboardLayout({
                   >
                     All Projects
                   </Link>
-                  <Link
+                  {/* <Link
                     href="/dashboard/projects/recent"
                     className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
                       pathname === "/dashboard/projects/recent"
@@ -148,7 +169,7 @@ export default function DashboardLayout({
                     }`}
                   >
                     Recent
-                  </Link>
+                  </Link> */}
                   {/* <Link
                     href="/dashboard/projects/archived"
                     className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
