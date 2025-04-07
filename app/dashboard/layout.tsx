@@ -142,7 +142,7 @@ export default function DashboardLayout({
                         : "text-gray-500 group-hover:text-gray-600"
                     }`}
                   />
-                  Projects
+                  Jobs
                 </div>
                 {isProjectsExpanded ? (
                   <ChevronDown className="h-4 w-4" />
@@ -161,7 +161,7 @@ export default function DashboardLayout({
                         : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
                     }`}
                   >
-                    All Projects
+                    All Jobs
                   </Link>
                   {/* <Link
                     href="/dashboard/projects/recent"

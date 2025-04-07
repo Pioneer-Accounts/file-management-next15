@@ -14,6 +14,7 @@ import {
   Edit2,
   Trash2,
   ChevronDown,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -24,8 +25,13 @@ export default function Projects() {
     useState<string>("");
   const [isFinancialYearDropdownOpen, setIsFinancialYearDropdownOpen] =
     useState(false);
+  const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
+  const [newJobName, setNewJobName] = useState("");
+  const [newJobDescription, setNewJobDescription] = useState("");
+
   const menuRef = useRef<HTMLDivElement>(null);
   const financialYearDropdownRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Sample financial years
   const financialYears = [
@@ -48,12 +54,33 @@ export default function Projects() {
       ) {
         setIsFinancialYearDropdownOpen(false);
       }
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node) &&
+        isNewJobModalOpen
+      ) {
+        setIsNewJobModalOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [isNewJobModalOpen]);
+
+  // Handle job creation
+  const handleCreateJob = () => {
+    // Here you would typically call an API to create the job
+    console.log("Creating new job:", {
+      name: newJobName,
+      description: newJobDescription,
+    });
+
+    // Reset form and close modal
+    setNewJobName("");
+    setNewJobDescription("");
+    setIsNewJobModalOpen(false);
+  };
 
   // Sample project data
   const projects = [
@@ -178,11 +205,88 @@ export default function Projects() {
           </div>
         </div>
 
-        <button className="ml-4 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+        <button
+          className="ml-4 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+          onClick={() => setIsNewJobModalOpen(true)}
+        >
           <Plus className="h-4 w-4" />
           <span>New Jobs</span>
         </button>
       </div>
+
+      {/* New Job Modal */}
+      {isNewJobModalOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
+          <div
+            ref={modalRef}
+            className="bg-white rounded-lg shadow-xl w-full max-w-lg"
+          >
+            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
+              <h2 className="text-xl font-semibold text-gray-800">
+                Create New Job
+              </h2>
+              <button
+                onClick={() => setIsNewJobModalOpen(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label
+                  htmlFor="jobName"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Name
+                </label>
+                <input
+                  id="jobName"
+                  type="text"
+                  value={newJobName}
+                  onChange={(e) => setNewJobName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter job name"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="jobDescription"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Description
+                </label>
+                <textarea
+                  id="jobDescription"
+                  value={newJobDescription}
+                  onChange={(e) => setNewJobDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter job description"
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            <div className="bg-gray-50 px-6 py-3 flex justify-end space-x-3 border-t border-gray-200">
+              <button
+                onClick={() => setIsNewJobModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateJob}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                disabled={!newJobName.trim()}
+              >
+                Create Job
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Access Section */}
       <div className="mb-10">
