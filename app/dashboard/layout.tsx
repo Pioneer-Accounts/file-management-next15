@@ -23,6 +23,8 @@ import {
   FileType,
   ChevronLeft,
 } from "lucide-react";
+import { useEffect } from "react";
+import Cookies from "js-cookie";
 
 export default function DashboardLayout({
   children,
@@ -35,6 +37,63 @@ export default function DashboardLayout({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(true);
   const [isSystemSetupExpanded, setIsSystemSetupExpanded] = useState(true);
+  // Add state for user profile
+  const [userProfile, setUserProfile] = useState<{
+    email: string;
+    fullName: string;
+  }>({
+    email: "",
+    fullName: "",
+  });
+
+  // Fetch user profile on component mount
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchUserProfile = async () => {
+      try {
+        // Get access token from localStorage
+        const accessToken = Cookies.get("accessToken");
+
+        if (!accessToken && isMounted) {
+          // Instead of immediate redirect, set a flag
+          console.log("No access token found");
+          return;
+        }
+
+        const response = await fetch(
+          "http://localhost:8000/accounts/profiles/me/",
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (response.ok && isMounted) {
+          const data = await response.json();
+          setUserProfile({
+            email: data.user.email || "",
+            fullName: data.full_name?.trim(),
+          });
+        } else if (response.status === 401 && isMounted) {
+          // Log instead of immediate redirect
+          console.log("Unauthorized access");
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("Error fetching user profile:", error);
+        }
+      }
+    };
+
+    fetchUserProfile();
+
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Handle logout function
   const handleLogout = () => {
@@ -43,10 +102,8 @@ export default function DashboardLayout({
     localStorage.removeItem("refreshToken");
 
     // Clear tokens from cache/cookies if using them
-    document.cookie =
-      "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    document.cookie =
-      "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    Cookies.remove("accessToken");
+    Cookies.remove("refreshToken");
 
     // Clear any session storage if used
     sessionStorage.removeItem("accessToken");
@@ -122,9 +179,7 @@ export default function DashboardLayout({
               title="Dashboard"
             >
               <Home
-                className={`${
-                  isCollapsed ? "" : "mr-3"
-                } h-5 w-5 ${
+                className={`${isCollapsed ? "" : "mr-3"} h-5 w-5 ${
                   pathname === "/dashboard"
                     ? "text-blue-600"
                     : "text-gray-500 group-hover:text-gray-600"
@@ -146,9 +201,7 @@ export default function DashboardLayout({
               title="Documents"
             >
               <FileText
-                className={`${
-                  isCollapsed ? "" : "mr-3"
-                } h-5 w-5 ${
+                className={`${isCollapsed ? "" : "mr-3"} h-5 w-5 ${
                   pathname === "/dashboard/documents"
                     ? "text-blue-600"
                     : "text-gray-500 group-hover:text-gray-600"
@@ -172,9 +225,7 @@ export default function DashboardLayout({
               >
                 <div className="flex items-center">
                   <FolderOpen
-                    className={`${
-                      isCollapsed ? "" : "mr-3"
-                    } h-5 w-5 ${
+                    className={`${isCollapsed ? "" : "mr-3"} h-5 w-5 ${
                       pathname.includes("/dashboard/projects")
                         ? "text-blue-600"
                         : "text-gray-500 group-hover:text-gray-600"
@@ -182,13 +233,12 @@ export default function DashboardLayout({
                   />
                   {!isCollapsed && "Jobs"}
                 </div>
-                {!isCollapsed && (
-                  isProjectsExpanded ? (
+                {!isCollapsed &&
+                  (isProjectsExpanded ? (
                     <ChevronDown className="h-4 w-4" />
                   ) : (
                     <ChevronRight className="h-4 w-4" />
-                  )
-                )}
+                  ))}
               </button>
 
               {isProjectsExpanded && !isCollapsed && (
@@ -219,9 +269,7 @@ export default function DashboardLayout({
               title="Users"
             >
               <Users
-                className={`${
-                  isCollapsed ? "" : "mr-3"
-                } h-5 w-5 ${
+                className={`${isCollapsed ? "" : "mr-3"} h-5 w-5 ${
                   pathname === "/dashboard/users"
                     ? "text-blue-600"
                     : "text-gray-500 group-hover:text-gray-600"
@@ -245,9 +293,7 @@ export default function DashboardLayout({
               >
                 <div className="flex items-center">
                   <Settings
-                    className={`${
-                      isCollapsed ? "" : "mr-3"
-                    } h-5 w-5 ${
+                    className={`${isCollapsed ? "" : "mr-3"} h-5 w-5 ${
                       pathname.includes("/dashboard/system-setup")
                         ? "text-blue-600"
                         : "text-gray-500 group-hover:text-gray-600"
@@ -255,13 +301,12 @@ export default function DashboardLayout({
                   />
                   {!isCollapsed && "System Setup"}
                 </div>
-                {!isCollapsed && (
-                  isSystemSetupExpanded ? (
+                {!isCollapsed &&
+                  (isSystemSetupExpanded ? (
                     <ChevronDown className="h-4 w-4" />
                   ) : (
                     <ChevronRight className="h-4 w-4" />
-                  )
-                )}
+                  ))}
               </button>
 
               {isSystemSetupExpanded && !isCollapsed && (
@@ -305,10 +350,10 @@ export default function DashboardLayout({
               } py-2.5 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 group`}
               title="Settings"
             >
-              <Settings 
+              <Settings
                 className={`${
                   isCollapsed ? "" : "mr-3"
-                } h-5 w-5 text-gray-500 group-hover:text-gray-600`} 
+                } h-5 w-5 text-gray-500 group-hover:text-gray-600`}
               />
               {!isCollapsed && "Settings"}
             </Link>
@@ -319,10 +364,10 @@ export default function DashboardLayout({
               } py-2.5 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 group`}
               title="Help & Support"
             >
-              <HelpCircle 
+              <HelpCircle
                 className={`${
                   isCollapsed ? "" : "mr-3"
-                } h-5 w-5 text-gray-500 group-hover:text-gray-600`} 
+                } h-5 w-5 text-gray-500 group-hover:text-gray-600`}
               />
               {!isCollapsed && "Help & Support"}
             </Link>
@@ -350,8 +395,12 @@ export default function DashboardLayout({
                 </div>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-800">John Doe</p>
-                <p className="text-xs text-gray-500">john.doe@example.com</p>
+                <p className="text-sm font-medium text-gray-800">
+                  {userProfile.fullName || "User"}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {userProfile.email || "Loading..."}
+                </p>
               </div>
               <button
                 onClick={handleLogout}
