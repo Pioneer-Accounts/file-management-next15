@@ -62,7 +62,7 @@ export default function DashboardLayout({
         }
 
         const response = await fetch(
-          "http://localhost:8000/accounts/profiles/me/",
+          `${process.env.NEXT_PUBLIC_API_URL}/accounts/profiles/me/`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -76,6 +76,7 @@ export default function DashboardLayout({
             email: data.user.email || "",
             fullName: data.full_name?.trim(),
           });
+          Cookies.set("FMSUID", data.id, { expires: 7 });
         } else if (response.status === 401 && isMounted) {
           // Log instead of immediate redirect
           console.log("Unauthorized access");
@@ -104,6 +105,7 @@ export default function DashboardLayout({
     // Clear tokens from cache/cookies if using them
     Cookies.remove("accessToken");
     Cookies.remove("refreshToken");
+    Cookies.remove("FMSUID");
 
     // Clear any session storage if used
     sessionStorage.removeItem("accessToken");
