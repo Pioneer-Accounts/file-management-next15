@@ -22,6 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { MoreVertical } from "lucide-react";
 
 export default function Documents() {
   // States for filtering and searching
@@ -32,6 +33,8 @@ export default function Documents() {
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [tagSearchTerm, setTagSearchTerm] = useState("");
   const tagDropdownRef = useRef<HTMLDivElement>(null);
+  // Add the activeDropdown state here inside the component
+  const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -48,6 +51,20 @@ export default function Documents() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Add this useEffect to close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (activeDropdown !== null) {
+        setActiveDropdown(null);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [activeDropdown]);
 
   const documents = [
     {
@@ -300,53 +317,117 @@ export default function Documents() {
           </Popover>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         {filteredDocuments.map((doc) => (
-          <div key={doc.id} className="bg-blue-100 rounded-lg overflow-hidden">
-            {/* Thumbnail */}
-            <div className="relative aspect-[4/4] bg-gray-800">
+          <div 
+            key={doc.id} 
+            className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all group"
+          >
+            {/* Thumbnail with hover overlay */}
+            <div className="relative aspect-square bg-gray-100">
               {doc.thumbnail ? (
-                <img
-                  src={doc.thumbnail}
-                  alt={doc.title}
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  <img
+                    src={doc.thumbnail}
+                    alt={doc.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
+                </>
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <FileText className="w-12 h-12 text-gray-400" />
+                  <FileText className="w-16 h-16 text-gray-300" />
                 </div>
               )}
+              
               {/* Tags */}
-              <div className="absolute top-2 left-2">
+              <div className="absolute top-3 left-3 flex flex-wrap gap-1">
                 {doc.tags.map((tag, index) => (
                   <span
                     key={index}
-                    className="inline-block bg-blue-500 text-white text-xs px-2 py-1 rounded mr-1"
+                    className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
                   >
                     {tag}
                   </span>
                 ))}
               </div>
+              
+              {/* Action menu */}
+              <div className="absolute top-3 right-3">
+                {/* Action menu */}
+                <div className="absolute top-3 right-3">
+                  <button 
+                    className="p-1.5 rounded-full bg-white bg-opacity-80 text-gray-500 hover:text-gray-700 hover:bg-opacity-100 relative"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveDropdown(activeDropdown === doc.id ? null : doc.id);
+                    }}
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  
+                  {activeDropdown === doc.id && (
+                    <div className="absolute right-0 top-8 w-36 bg-white rounded-md shadow-lg z-10 border border-gray-200 py-1">
+                      <button 
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Handle edit action
+                          console.log("Edit document", doc.id);
+                        }}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </button>
+                      <button 
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Handle download action
+                          console.log("Download document", doc.id);
+                        }}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-
+          
             {/* Document Info */}
-            <div className="p-3">
-              <h3 className="text-black text-sm font-medium mb-1">
-                {doc.title}
-              </h3>
-              <p className="text-gray-400 text-xs mb-3">{doc.date}</p>
-
-              {/* Action Buttons */}
-              <div className="flex items-center space-x-3">
-                <button className="text-gray-400 hover:text-white">
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button className="text-gray-400 hover:text-white">
-                  <Edit className="w-4 h-4" />
-                </button>
-                <button className="text-gray-400 hover:text-white">
-                  <Download className="w-4 h-4" />
-                </button>
+            <div className="p-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-gray-800 font-medium line-clamp-1">
+                    {doc.title}
+                  </h3>
+                  <p className="text-gray-500 text-sm mt-1">{doc.date}</p>
+                </div>
+                {/* Replace the download button with view button */}
+                <div className="flex items-center gap-2">
+                  <button 
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
+                    title="View"
+                    onClick={() => {
+                      // Handle view action
+                      console.log("View document", doc.id);
+                    }}
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Progress bar (optional) */}
+              <div className="mt-3">
+                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                  <div 
+                    className="bg-blue-600 h-1.5 rounded-full" 
+                    style={{ width: '75%' }} // Replace with actual progress
+                  />
+                </div>
               </div>
             </div>
           </div>
