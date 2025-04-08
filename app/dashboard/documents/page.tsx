@@ -10,6 +10,8 @@ import {
   X,
   ChevronDown,
   CalendarIcon,
+  Upload,
+  Plus,
 } from "lucide-react";
 import { format, isWithinInterval, isSameDay } from "date-fns";
 import { DateRange } from "react-day-picker";
@@ -23,6 +25,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { MoreVertical } from "lucide-react";
+import Cookies from "js-cookie";
 
 export default function Documents() {
   // States for filtering and searching
@@ -35,6 +38,12 @@ export default function Documents() {
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   // Add the activeDropdown state here inside the component
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
+  // Add state for upload modal
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedDocType, setSelectedDocType] = useState<string>("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -59,7 +68,7 @@ export default function Documents() {
         setActiveDropdown(null);
       }
     }
-    
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -155,14 +164,114 @@ export default function Documents() {
     );
   };
 
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  // Handle document upload
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedFile) {
+      // Show error
+      return;
+    }
+
+    setIsUploading(true);
+
+    // Create FormData object to send file
+    const formData = new FormData();
+
+    // Get filename without extension for title
+    const fileName = selectedFile.name.split(".")[0];
+    const tagIds = [1, 2, 3];
+    // Add required fields to the request
+    formData.append("title", fileName);
+    formData.append("document", selectedFile);
+    formData.append("created", "");
+    formData.append("correspondent", "");
+    formData.append("document_type", "");
+    // Fix: Send empty arrays instead of stringified empty arrays for tags and Project
+    formData.append("tags", JSON.stringify(tagIds)); // Send as empty array string
+    formData.append("Project", ""); // Send as empty array string
+
+    try {
+      // Start progress simulation
+      const interval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 95) {
+            clearInterval(interval);
+            return prev;
+          }
+          return prev + 5;
+        });
+      }, 200);
+
+      // Get access token from localStorage
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      // Make API call
+      const response = await fetch("http://localhost:8000/documents/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          // Note: Don't set Content-Type when using FormData, browser will set it with boundary
+        },
+        body: formData,
+      });
+
+      clearInterval(interval);
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      // Complete the progress
+      setUploadProgress(100);
+
+      // Reset form after successful upload
+      setTimeout(() => {
+        setIsUploading(false);
+        setIsUploadModalOpen(false);
+        setSelectedFile(null);
+        setUploadProgress(0);
+        // Here you would refresh your documents list
+        // fetchDocuments(); // Uncomment if you have a function to refresh documents
+      }, 500);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      setIsUploading(false);
+      // Handle error - show error message to user
+      alert("Upload failed. Please try again.");
+    }
+  };
+
   return (
     <div>
       <div className="mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-4 rounded-md bg-blue-100">
-            <FileText className="h-6 w-6 text-blue-600" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-4 rounded-md bg-blue-100">
+              <FileText className="h-6 w-6 text-blue-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-800">Documents</h1>
           </div>
-          <h1 className="text-3xl font-bold text-gray-800">Documents</h1>
+
+          {/* Upload Button */}
+          <Button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+          >
+            <Upload className="h-4 w-4" />
+            <span>Upload Document</span>
+          </Button>
         </div>
       </div>
 
@@ -319,8 +428,8 @@ export default function Documents() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         {filteredDocuments.map((doc) => (
-          <div 
-            key={doc.id} 
+          <div
+            key={doc.id}
             className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all group"
           >
             {/* Thumbnail with hover overlay */}
@@ -339,7 +448,7 @@ export default function Documents() {
                   <FileText className="w-16 h-16 text-gray-300" />
                 </div>
               )}
-              
+
               {/* Tags */}
               <div className="absolute top-3 left-3 flex flex-wrap gap-1">
                 {doc.tags.map((tag, index) => (
@@ -351,24 +460,26 @@ export default function Documents() {
                   </span>
                 ))}
               </div>
-              
+
               {/* Action menu */}
               <div className="absolute top-3 right-3">
                 {/* Action menu */}
                 <div className="absolute top-3 right-3">
-                  <button 
+                  <button
                     className="p-1.5 rounded-full bg-white bg-opacity-80 text-gray-500 hover:text-gray-700 hover:bg-opacity-100 relative"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setActiveDropdown(activeDropdown === doc.id ? null : doc.id);
+                      setActiveDropdown(
+                        activeDropdown === doc.id ? null : doc.id
+                      );
                     }}
                   >
                     <MoreVertical className="w-4 h-4" />
                   </button>
-                  
+
                   {activeDropdown === doc.id && (
                     <div className="absolute right-0 top-8 w-36 bg-white rounded-md shadow-lg z-10 border border-gray-200 py-1">
-                      <button 
+                      <button
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -379,7 +490,7 @@ export default function Documents() {
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
                       </button>
-                      <button 
+                      <button
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -395,7 +506,7 @@ export default function Documents() {
                 </div>
               </div>
             </div>
-          
+
             {/* Document Info */}
             <div className="p-4">
               <div className="flex justify-between items-start">
@@ -407,7 +518,7 @@ export default function Documents() {
                 </div>
                 {/* Replace the download button with view button */}
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
                     title="View"
                     onClick={() => {
@@ -419,13 +530,13 @@ export default function Documents() {
                   </button>
                 </div>
               </div>
-              
+
               {/* Progress bar (optional) */}
               <div className="mt-3">
                 <div className="w-full bg-gray-200 rounded-full h-1.5">
-                  <div 
-                    className="bg-blue-600 h-1.5 rounded-full" 
-                    style={{ width: '75%' }} // Replace with actual progress
+                  <div
+                    className="bg-blue-600 h-1.5 rounded-full"
+                    style={{ width: "75%" }} // Replace with actual progress
                   />
                 </div>
               </div>
@@ -433,6 +544,136 @@ export default function Documents() {
           </div>
         ))}
       </div>
+
+      {/* Upload Modal */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-[60%] h-[60%] mx-4 flex flex-col">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-800">
+                  Upload Document
+                </h2>
+                <button
+                  onClick={() => setIsUploadModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700 rounded-full p-1 hover:bg-gray-100"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 flex-grow overflow-y-auto">
+              <form
+                onSubmit={handleUpload}
+                className="space-y-6 h-full flex flex-col"
+              >
+                {/* File Upload */}
+                <div className="flex-grow">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Document File
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center h-64 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                    {selectedFile ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-center">
+                          <FileText className="h-12 w-12 text-blue-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-800 truncate max-w-[200px] mx-auto">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {(selectedFile.size / 1024).toFixed(2)} KB
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedFile(null)}
+                          className="text-xs text-red-600 hover:text-red-800 font-medium bg-red-50 hover:bg-red-100 px-3 py-1 rounded-full transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="p-3 rounded-full bg-blue-50 mb-3">
+                            <Upload className="h-8 w-8 text-blue-500" />
+                          </div>
+                          <p className="text-sm font-medium text-gray-700">
+                            Drag and drop your file here
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1 mb-3">or</p>
+                          <span className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
+                            Browse Files
+                          </span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            onChange={handleFileChange}
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          />
+                          <p className="text-xs text-gray-400 mt-4">
+                            Supported formats: PDF, Word, Images
+                          </p>
+                        </div>
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {/* Upload Progress */}
+                {isUploading && (
+                  <div className="space-y-2 mt-4">
+                    <div className="flex justify-between text-sm text-gray-700">
+                      <span className="font-medium">Uploading document...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-auto pt-4 border-t border-gray-200">
+                  <div className="flex justify-end gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsUploadModalOpen(false)}
+                      disabled={isUploading}
+                      className="px-4"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={!selectedFile || isUploading}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4"
+                    >
+                      {isUploading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Uploading...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Upload className="h-4 w-4" />
+                          <span>Upload Document</span>
+                        </div>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
