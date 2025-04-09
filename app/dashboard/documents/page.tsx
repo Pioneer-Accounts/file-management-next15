@@ -75,69 +75,78 @@ export default function Documents() {
     };
   }, [activeDropdown]);
 
-  const documents = [
-    {
-      id: 1,
-      title: "testpic7",
-      date: "Apr 3, 2025",
-      tags: ["demo tag"],
-      thumbnail: "/signup.jpg",
-    },
-    {
-      id: 2,
-      title: "testpic7",
-      date: "Apr 3, 2025",
-      tags: ["demo tag"],
-      thumbnail: "/signup.jpg",
-    },
-    {
-      id: 3,
-      title: "testpic7",
-      date: "Apr 3, 2025",
-      tags: ["demo tag"],
-      thumbnail: "/signup.jpg",
-    },
-    {
-      id: 4,
-      title: "testpic7",
-      date: "Apr 3, 2025",
-      tags: ["demo tag"],
-      thumbnail: "/signup.jpg",
-    },
-    {
-      id: 5,
-      title: "testpic7",
-      date: "Apr 3, 2025",
-      tags: ["demo tag"],
-      thumbnail: "/signup.jpg",
-    },
-    {
-      id: 6,
-      title: "testpic7",
-      date: "Apr 3, 2025",
-      tags: ["demo tag"],
-      thumbnail: "/signup.jpg",
-    },
-    // Add more documents as needed
-  ];
+  // Add this interface for document type
+  interface Document {
+    id: number;
+    title: string;
+    tags: number[];
+    created_date: string;
+    page_count: number | null;
+    thumbnail?: string; // Optional since API doesn't return this
+  }
 
-  // Extract all unique tags
-  const allTags = Array.from(new Set(documents.flatMap((doc) => doc.tags)));
+  // Replace the hardcoded documents array with state
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Filter documents based on search term and selected filters
+  // Add useEffect to fetch documents when component mounts
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  // Function to fetch documents from API
+  const fetchDocuments = async () => {
+    setIsLoading(true);
+    try {
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch("http://localhost:8000/documents/", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setDocuments(data);
+    } catch (error) {
+      console.error("Failed to fetch documents:", error);
+      // Handle error - show error message to user
+      alert("Failed to load documents. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Extract all unique tags - update to handle numeric tag IDs
+  const allTags = Array.from(
+    new Set(documents.flatMap((doc) => doc.tags.map((tag) => tag.toString())))
+  );
+
+  // Filter documents based on search term and selected filters - update to handle API data format
   const filteredDocuments = documents.filter((doc) => {
     // Title search filter
     const matchesSearch =
       searchTerm === "" ||
       doc.title.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Tag filter
+    // Tag filter - convert numeric tags to strings for comparison
+    const docTagStrings = doc.tags.map((tag) => tag.toString());
     const matchesTags =
       selectedTags.length === 0 ||
-      selectedTags.some((tag) => doc.tags.includes(tag));
+      selectedTags.some((tag) => docTagStrings.includes(tag));
 
     // Date range filter
-    const docDate = new Date(doc.date);
+    const docDate = new Date(doc.created_date);
     const matchesDate =
       !dateRange ||
       (!dateRange.from && !dateRange.to) || // No date range selected
@@ -242,8 +251,8 @@ export default function Documents() {
         setIsUploadModalOpen(false);
         setSelectedFile(null);
         setUploadProgress(0);
-        // Here you would refresh your documents list
-        // fetchDocuments(); // Uncomment if you have a function to refresh documents
+        // Refresh documents list
+        fetchDocuments();
       }, 500);
     } catch (error) {
       console.error("Upload failed:", error);
@@ -427,42 +436,57 @@ export default function Documents() {
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {filteredDocuments.map((doc) => (
-          <div
-            key={doc.id}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all group"
-          >
-            {/* Thumbnail with hover overlay */}
-            <div className="relative aspect-square bg-gray-100">
-              {doc.thumbnail ? (
-                <>
-                  <img
-                    src={doc.thumbnail}
-                    alt={doc.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
-                </>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <FileText className="w-16 h-16 text-gray-300" />
+        {isLoading ? (
+          // Loading state
+          Array(5)
+            .fill(0)
+            .map((_, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+              >
+                <div className="relative aspect-square bg-gray-100 animate-pulse"></div>
+                <div className="p-4">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2"></div>
                 </div>
-              )}
-
-              {/* Tags */}
-              <div className="absolute top-3 left-3 flex flex-wrap gap-1">
-                {doc.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
-                  >
-                    {tag}
-                  </span>
-                ))}
               </div>
+            ))
+        ) : filteredDocuments.length > 0 ? (
+          filteredDocuments.map((doc) => (
+            <div
+              key={doc.id}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all group"
+            >
+              {/* Thumbnail with hover overlay */}
+              <div className="relative aspect-square bg-gray-100">
+                {doc.thumbnail ? (
+                  <>
+                    <img
+                      src={doc.thumbnail}
+                      alt={doc.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
+                  </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <FileText className="w-16 h-16 text-gray-300" />
+                  </div>
+                )}
 
-              {/* Action menu */}
-              <div className="absolute top-3 right-3">
+                {/* Tags */}
+                <div className="absolute top-3 left-3 flex flex-wrap gap-1">
+                  {doc.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
                 {/* Action menu */}
                 <div className="absolute top-3 right-3">
                   <button
@@ -505,44 +529,60 @@ export default function Documents() {
                   )}
                 </div>
               </div>
+
+              {/* Document Info */}
+              <div className="p-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-gray-800 font-medium line-clamp-1">
+                      {doc.title}
+                    </h3>
+                    <p className="text-gray-500 text-sm mt-1">
+                      {doc.created_date}
+                    </p>
+                  </div>
+                  {/* Replace the download button with view button */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
+                      title="View"
+                      onClick={() => {
+                        // Handle view action
+                        console.log("View document", doc.id);
+                      }}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Progress bar (optional) - show only if page_count is available */}
+                {doc.page_count && (
+                  <div className="mt-3">
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div
+                        className="bg-blue-600 h-1.5 rounded-full"
+                        style={{ width: "75%" }} // Replace with actual progress
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-
-            {/* Document Info */}
-            <div className="p-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-gray-800 font-medium line-clamp-1">
-                    {doc.title}
-                  </h3>
-                  <p className="text-gray-500 text-sm mt-1">{doc.date}</p>
-                </div>
-                {/* Replace the download button with view button */}
-                <div className="flex items-center gap-2">
-                  <button
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
-                    title="View"
-                    onClick={() => {
-                      // Handle view action
-                      console.log("View document", doc.id);
-                    }}
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Progress bar (optional) */}
-              <div className="mt-3">
-                <div className="w-full bg-gray-200 rounded-full h-1.5">
-                  <div
-                    className="bg-blue-600 h-1.5 rounded-full"
-                    style={{ width: "75%" }} // Replace with actual progress
-                  />
-                </div>
-              </div>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-10">
+            <div className="flex flex-col items-center justify-center">
+              <FileText className="h-12 w-12 text-gray-300 mb-3" />
+              <h3 className="text-lg font-medium text-gray-700">
+                No documents found
+              </h3>
+              <p className="text-gray-500 mt-1">
+                Try adjusting your search or filters
+              </p>
             </div>
           </div>
-        ))}
+        )}
       </div>
 
       {/* Upload Modal */}
