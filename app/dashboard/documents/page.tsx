@@ -45,6 +45,58 @@ export default function Documents() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Add interface for tag type
+  interface Tag {
+    id: number;
+    name: string;
+    color: string;
+  }
+
+  // Add state for tags
+  const [tags, setTags] = useState<Tag[]>([]);
+  
+  // Add this interface for document type
+  interface Document {
+    id: number;
+    title: string;
+    tags: number[];
+    created_date: string;
+    page_count: number | null;
+    thumbnail?: string; // Optional since API doesn't return this
+  }
+
+  // Replace the hardcoded documents array with state
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Function to fetch tags from API
+  const fetchTags = async () => {
+    try {
+      const accessToken = Cookies.get("accessToken");
+      
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch("http://localhost:8000/tags", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setTags(data);
+    } catch (error) {
+      console.error("Failed to fetch tags:", error);
+    }
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -75,23 +127,10 @@ export default function Documents() {
     };
   }, [activeDropdown]);
 
-  // Add this interface for document type
-  interface Document {
-    id: number;
-    title: string;
-    tags: number[];
-    created_date: string;
-    page_count: number | null;
-    thumbnail?: string; // Optional since API doesn't return this
-  }
-
-  // Replace the hardcoded documents array with state
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Add useEffect to fetch documents when component mounts
+  // Add useEffect to fetch documents and tags when component mounts
   useEffect(() => {
     fetchDocuments();
+    fetchTags();
   }, []);
 
   // Function to fetch documents from API
@@ -127,49 +166,23 @@ export default function Documents() {
     }
   };
 
-  // Extract all unique tags - update to handle numeric tag IDs
-  const allTags = Array.from(
-    new Set(documents.flatMap((doc) => doc.tags.map((tag) => tag.toString())))
-  );
-
-  // Filter documents based on search term and selected filters - update to handle API data format
-  const filteredDocuments = documents.filter((doc) => {
-    // Title search filter
-    const matchesSearch =
-      searchTerm === "" ||
-      doc.title.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // Tag filter - convert numeric tags to strings for comparison
-    const docTagStrings = doc.tags.map((tag) => tag.toString());
-    const matchesTags =
-      selectedTags.length === 0 ||
-      selectedTags.some((tag) => docTagStrings.includes(tag));
-
-    // Date range filter
-    const docDate = new Date(doc.created_date);
-    const matchesDate =
-      !dateRange ||
-      (!dateRange.from && !dateRange.to) || // No date range selected
-      (dateRange.from && !dateRange.to && isSameDay(docDate, dateRange.from)) || // Only from date selected and matches
-      (dateRange.from &&
-        dateRange.to &&
-        isWithinInterval(docDate, {
-          start: dateRange.from,
-          end: dateRange.to,
-        })); // Date is within range
-
-    return matchesSearch && matchesTags && matchesDate;
-  });
+  // Extract all unique tags - update to use tag objects
+  const allTags = tags.map(tag => ({
+    id: tag.id,
+    name: tag.name,
+    color: tag.color
+  }));
 
   // Filter tags based on search term in the dropdown
   const filteredTags = allTags.filter((tag) =>
-    tag.toLowerCase().includes(tagSearchTerm.toLowerCase())
+    tag.name.toLowerCase().includes(tagSearchTerm.toLowerCase())
   );
 
-  // Toggle tag selection
-  const toggleTag = (tag: string) => {
+  // Toggle tag selection - update to use tag IDs
+  const toggleTag = (tagId: number) => {
+    const tagIdStr = tagId.toString();
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tagIdStr) ? prev.filter((t) => t !== tagIdStr) : [...prev, tagIdStr]
     );
   };
 
@@ -333,21 +346,25 @@ export default function Documents() {
                   {filteredTags.length > 0 ? (
                     filteredTags.map((tag) => (
                       <div
-                        key={tag}
+                        key={tag.id}
                         className="flex items-center p-2 hover:bg-gray-100 rounded-md"
                       >
                         <input
                           type="checkbox"
-                          id={`tag-${tag}`}
-                          checked={selectedTags.includes(tag)}
-                          onChange={() => toggleTag(tag)}
+                          id={`tag-${tag.id}`}
+                          checked={selectedTags.includes(tag.id.toString())}
+                          onChange={() => toggleTag(tag.id)}
                           className="mr-2"
                         />
                         <label
-                          htmlFor={`tag-${tag}`}
-                          className="text-sm cursor-pointer"
+                          htmlFor={`tag-${tag.id}`}
+                          className="text-sm cursor-pointer flex items-center"
                         >
-                          {tag}
+                          <span 
+                            className="w-3 h-3 rounded-full mr-2" 
+                            style={{ backgroundColor: tag.color }}
+                          ></span>
+                          {tag.name}
                         </label>
                       </div>
                     ))
@@ -452,8 +469,28 @@ export default function Documents() {
                 </div>
               </div>
             ))
-        ) : filteredDocuments.length > 0 ? (
-          filteredDocuments.map((doc) => (
+        ) : documents.length > 0 ? (
+          documents
+            .filter(doc => {
+              // Filter by search term
+              const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase());
+              
+              // Filter by selected tags
+              const matchesTags = selectedTags.length === 0 || 
+                doc.tags.some(tagId => selectedTags.includes(tagId.toString()));
+              
+              // Filter by date range
+              const matchesDate = !dateRange?.from || !dateRange?.to || 
+                isWithinInterval(new Date(doc.created_date), {
+                  start: dateRange.from,
+                  end: dateRange.to
+                }) ||
+                isSameDay(new Date(doc.created_date), dateRange.from) ||
+                isSameDay(new Date(doc.created_date), dateRange.to);
+
+              return matchesSearch && matchesTags && matchesDate;
+            })
+            .map((doc) => (
             <div
               key={doc.id}
               className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all group"
@@ -477,14 +514,19 @@ export default function Documents() {
 
                 {/* Tags */}
                 <div className="absolute top-3 left-3 flex flex-wrap gap-1">
-                  {doc.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                  {doc.tags.map((tagId, index) => {
+                    // Find the tag object that matches the ID
+                    const tag = tags.find(t => t.id === tagId);
+                    return (
+                      <span
+                        key={index}
+                        className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
+                        // style={{ backgroundColor: tag?.color || '#dbeafe', color: '#1e40af' }}
+                      >
+                        {tag ? tag.name : `Tag ${tagId}`}
+                      </span>
+                    );
+                  })}
                 </div>
 
                 {/* Action menu */}
