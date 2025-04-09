@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { ProjectHeader } from "@/components/projects/ProjectHeader";
 import { SearchFilterBar } from "@/components/projects/SearchFilterBar";
 import { DocumentCard } from "@/components/projects/DocumentCard";
 import { NewDocumentModal } from "@/components/projects/NewDocumentModal";
+import Cookies from "js-cookie";
 
 // Helper function to determine financial year from date
 function getFinancialYearFromDate(date: Date): string {
@@ -24,63 +25,112 @@ function getFinancialYearFromDate(date: Date): string {
   }
 }
 
+// Define Project interface based on API response
+interface Project {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  status_display: string;
+  start_date: string | null;
+}
+
 export default function ProjectDetailPage() {
   // Get the project ID from the URL
   const params = useParams();
+  const searchParams = useSearchParams();
   const projectId = params.id as string;
 
-  // Sample project data (in a real app, would be fetched from API)
-  const projects = [
-    {
-      id: "1",
-      name: "UI Design",
-      description: "User interface design projects",
-      color: "bg-blue-100",
-    },
-    {
-      id: "2",
-      name: "DashLite Resource",
-      description: "Dashboard resources and components",
-      color: "bg-blue-100",
-    },
-    {
-      id: "3",
-      name: "Projects",
-      description: "Client project files and assets",
-      color: "bg-blue-100",
-    },
-    {
-      id: "4",
-      name: "Marketing",
-      description: "Marketing materials and campaigns",
-      color: "bg-green-100",
-    },
-    {
-      id: "5",
-      name: "Development",
-      description: "Software development projects",
-      color: "bg-purple-100",
-    },
-    {
-      id: "6",
-      name: "Research",
-      description: "Research documents and findings",
-      color: "bg-yellow-100",
-    },
-  ];
+  // State for project data
+  const [project, setProject] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    color: string;
+  }>({
+    id: projectId,
+    name: "Loading...",
+    description: "Loading project details...",
+    color: "bg-blue-100",
+  });
 
-  // Find the project by ID
-  const project = projects.find((p) => p.id === projectId) || {
-    id: "-1",
-    name: "Unknown Project",
-    description: "Project not found",
-    color: "bg-gray-100",
-  };
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch project data from API
+  useEffect(() => {
+    async function fetchProject() {
+      try {
+        const accessToken = Cookies.get("accessToken");
+
+        if (!accessToken) {
+          throw new Error("Authentication token not found");
+        }
+
+        const response = await fetch(
+          `http://localhost:8000/projects/${projectId}/`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          // If API call fails, try to use query params as fallback
+          const title = searchParams.get("title");
+          const description = searchParams.get("description");
+
+          if (title) {
+            setProject({
+              id: projectId,
+              name: title,
+              description: description || "",
+              color: "bg-blue-100",
+            });
+            return;
+          }
+
+          throw new Error(`Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Map API response to project format
+        setProject({
+          id: data.id.toString(),
+          name: data.title,
+          description: data.description,
+          color: "bg-blue-100", // Static color as requested
+        });
+      } catch (error) {
+        console.error("Failed to fetch project:", error);
+        // If there's an error, check if we have query params to use
+        const title = searchParams.get("title");
+        const description = searchParams.get("description");
+
+        if (title) {
+          setProject({
+            id: projectId,
+            name: title,
+            description: description || "",
+            color: "bg-blue-100",
+          });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchProject();
+  }, [projectId, searchParams]);
 
   // States for filtering and searching
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
+  const [selectedFinancialYear, setSelectedFinancialYear] =
+    useState<string>("");
   const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
   const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
 
@@ -142,7 +192,7 @@ export default function ProjectDetailPage() {
     "final",
     "approved",
     "revision",
-    "draft"
+    "draft",
   ];
 
   // Sample correspondents data
@@ -184,22 +234,27 @@ export default function ProjectDetailPage() {
     const docFinancialYear = getFinancialYearFromDate(docDate);
     const matchesFinancialYear =
       !selectedFinancialYear || docFinancialYear === selectedFinancialYear;
-      
+
     // Document Type filter
     // For demonstration, we'll assume each document has a type property
     // In a real application, you would have this data
     const docType = doc.id % 2 === 0 ? "Invoice" : "Contract"; // Mock document type based on ID
-    const matchesDocumentType = 
+    const matchesDocumentType =
       !selectedDocumentType || docType === selectedDocumentType;
 
-    return matchesSearch && matchesTags && matchesFinancialYear && matchesDocumentType;
+    return (
+      matchesSearch &&
+      matchesTags &&
+      matchesFinancialYear &&
+      matchesDocumentType
+    );
   });
 
   return (
     <div>
       {/* Project Header */}
       <ProjectHeader project={project} />
-      
+
       {/* Search and Filter Bar */}
       <SearchFilterBar
         searchTerm={searchTerm}
@@ -215,14 +270,14 @@ export default function ProjectDetailPage() {
         financialYears={financialYears}
         documentTypes={documentTypes}
       />
-      
+
       {/* Project Documents Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {filteredDocuments.map((doc) => (
           <DocumentCard key={doc.id} document={doc} />
         ))}
       </div>
-      
+
       {/* New Document Modal */}
       <NewDocumentModal
         isOpen={isNewDocModalOpen}
