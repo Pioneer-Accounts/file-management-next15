@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import Cookies from "js-cookie";
 
 export default function Projects() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -69,17 +70,55 @@ export default function Projects() {
   }, [isNewJobModalOpen]);
 
   // Handle job creation
-  const handleCreateJob = () => {
-    // Here you would typically call an API to create the job
-    console.log("Creating new job:", {
-      name: newJobName,
-      description: newJobDescription,
-    });
+  const handleCreateJob = async () => {
+    if (!newJobName.trim()) {
+      return;
+    }
 
-    // Reset form and close modal
-    setNewJobName("");
-    setNewJobDescription("");
-    setIsNewJobModalOpen(false);
+    try {
+      // Get access token from cookies
+      const accessToken = Cookies.get("accessToken");
+      
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      // Prepare the request data
+      const projectData = {
+        title: newJobName,
+        description: newJobDescription,
+        status: "unknown",
+        start_date: null
+      };
+
+      // Make API call to create project
+      const response = await fetch("http://localhost:8000/projects/", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(projectData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Project created successfully:", data);
+
+      // Reset form and close modal
+      setNewJobName("");
+      setNewJobDescription("");
+      setIsNewJobModalOpen(false);
+      
+      // Here you would typically refresh the projects list
+      // fetchProjects();
+    } catch (error) {
+      console.error("Failed to create project:", error);
+      alert("Failed to create project. Please try again.");
+    }
   };
 
   // Sample project data
