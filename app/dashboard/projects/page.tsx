@@ -30,6 +30,20 @@ export default function Projects() {
   const [newJobName, setNewJobName] = useState("");
   const [newJobDescription, setNewJobDescription] = useState("");
 
+  // Define Project interface based on API response
+  interface Project {
+    id: number;
+    title: string;
+    description: string;
+    status: string;
+    status_display: string;
+    start_date: string | null;
+  }
+
+  // Replace hardcoded projects with state
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const menuRef = useRef<HTMLDivElement>(null);
   const financialYearDropdownRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -42,6 +56,43 @@ export default function Projects() {
     "AY - 2021-22",
     "AY - 2020-21",
   ];
+
+  // Function to fetch projects from API
+  const fetchProjects = async () => {
+    setIsLoading(true);
+    try {
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch("http://localhost:8000/projects/", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setProjects(data);
+    } catch (error) {
+      console.error("Failed to fetch projects:", error);
+      alert("Failed to load projects. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch projects when component mounts
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -78,7 +129,7 @@ export default function Projects() {
     try {
       // Get access token from cookies
       const accessToken = Cookies.get("accessToken");
-      
+
       if (!accessToken) {
         throw new Error("Authentication token not found");
       }
@@ -88,17 +139,17 @@ export default function Projects() {
         title: newJobName,
         description: newJobDescription,
         status: "unknown",
-        start_date: null
+        start_date: null,
       };
 
       // Make API call to create project
       const response = await fetch("http://localhost:8000/projects/", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(projectData)
+        body: JSON.stringify(projectData),
       });
 
       if (!response.ok) {
@@ -112,58 +163,19 @@ export default function Projects() {
       setNewJobName("");
       setNewJobDescription("");
       setIsNewJobModalOpen(false);
-      
-      // Here you would typically refresh the projects list
-      // fetchProjects();
+
+      // Refresh projects list
+      fetchProjects();
     } catch (error) {
       console.error("Failed to create project:", error);
       alert("Failed to create project. Please try again.");
     }
   };
 
-  // Sample project data
-  const projects = [
-    {
-      id: 1,
-      name: "UI Design",
-      description: "User interface design projects",
-      color: "bg-blue-100",
-    },
-    {
-      id: 2,
-      name: "DashLite Resource",
-      description: "Dashboard resources and components",
-      color: "bg-blue-100",
-    },
-    {
-      id: 3,
-      name: "Projects",
-      description: "Client project files and assets",
-      color: "bg-blue-100",
-    },
-    {
-      id: 4,
-      name: "Marketing",
-      description: "Marketing materials and campaigns",
-      color: "bg-green-100",
-    },
-    {
-      id: 5,
-      name: "Development",
-      description: "Software development projects",
-      color: "bg-purple-100",
-    },
-    {
-      id: 6,
-      name: "Research",
-      description: "Research documents and findings",
-      color: "bg-yellow-100",
-    },
-  ];
-
+  // Filter projects based on search term
   const filteredProjects = projects.filter(
     (project) =>
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -333,58 +345,95 @@ export default function Projects() {
           Quick Access
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
-          {filteredProjects.map((project) => (
-            <div key={project.id} className="relative">
-              <Link href={`/dashboard/projects/${project.id}`}>
-                <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-gray-100 overflow-hidden">
-                  <div className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className={`p-3 rounded-md ${project.color}`}>
-                        <FolderOpen className="h-6 w-6 text-blue-600" />
-                      </div>
-                      <button
-                        className="text-gray-400 hover:text-gray-600 z-10"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setActiveMenu(
-                            activeMenu === project.id ? null : project.id
-                          );
-                        }}
-                      >
-                        <MoreHorizontal className="h-5 w-5" />
-                      </button>
-                    </div>
-                    <div className="mt-4">
-                      <h3 className="text-lg font-medium text-gray-800">
-                        {project.name}
-                      </h3>
-                      <p className="text-sm text-gray-500 mt-1 line-clamp-1">
-                        {project.description}
-                      </p>
-                    </div>
+          {isLoading ? (
+            // Loading state
+            Array(5)
+              .fill(0)
+              .map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 animate-pulse"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="p-3 rounded-md bg-gray-200 w-12 h-12"></div>
+                    <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-100 rounded w-full"></div>
+                    <div className="h-4 bg-gray-100 rounded w-1/4 mt-2"></div>
                   </div>
                 </div>
-              </Link>
+              ))
+          ) : filteredProjects.length > 0 ? (
+            filteredProjects.map((project) => (
+              <div key={project.id} className="relative">
+                <Link href={`/dashboard/projects/${project.id}`}>
+                  <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-gray-100 overflow-hidden">
+                    <div className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className={`p-3 rounded-md bg-blue-100`}>
+                          <FolderOpen className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <button
+                          className="text-gray-400 hover:text-gray-600 z-10"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setActiveMenu(
+                              activeMenu === project.id ? null : project.id
+                            );
+                          }}
+                        >
+                          <MoreHorizontal className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <div className="mt-4">
+                        <h3 className="text-lg font-medium text-gray-800">
+                          {project.title}
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1 line-clamp-1">
+                          {project.description}
+                        </p>
+                        {project.status_display && (
+                          <span className="inline-block mt-2 px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                            {project.status_display}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
 
-              {/* Options Menu Dropdown */}
-              {activeMenu === project.id && (
-                <div
-                  ref={menuRef}
-                  className="absolute right-2 top-12 bg-white rounded-md shadow-lg border border-gray-200 py-2 z-20 w-44"
-                >
-                  <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                    <Edit2 className="h-4 w-4 text-gray-500" />
-                    <span>Edit</span>
-                  </button>
-                  <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-gray-100 hover:text-red-700">
-                    <Trash2 className="h-4 w-4" />
-                    <span>Delete</span>
-                  </button>
-                </div>
-              )}
+                {/* Options Menu Dropdown */}
+                {activeMenu === project.id && (
+                  <div
+                    ref={menuRef}
+                    className="absolute right-2 top-12 bg-white rounded-md shadow-lg border border-gray-200 py-2 z-20 w-44"
+                  >
+                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <Edit2 className="h-4 w-4 text-gray-500" />
+                      <span>Edit</span>
+                    </button>
+                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-gray-100 hover:text-red-700">
+                      <Trash2 className="h-4 w-4" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center py-10 text-center">
+              <FolderOpen className="h-12 w-12 text-gray-300 mb-3" />
+              <h3 className="text-lg font-medium text-gray-700">
+                No jobs found
+              </h3>
+              <p className="text-gray-500 mt-1">
+                Create a new job to get started
+              </p>
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>
