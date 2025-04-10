@@ -27,6 +27,20 @@ import {
 import { MoreVertical } from "lucide-react";
 import Cookies from "js-cookie";
 
+// Helper function to process base64 string to data URL
+function getImageUrlFromBase64(base64String: string | undefined): string | null {
+  if (!base64String) return null;
+  try {
+    // Try to determine the type of image from the base64 data
+    // Since the Python backend is reading any file and encoding it directly,
+    // we'll use a generic image type that browsers can usually auto-detect
+    return `data:image/*;base64,${base64String}`;
+  } catch (e) {
+    console.error('Error processing base64 image:', e);
+    return null;
+  }
+}
+
 export default function Documents() {
   // States for filtering and searching
   const [searchTerm, setSearchTerm] = useState("");
@@ -63,6 +77,7 @@ export default function Documents() {
     created_date: string;
     page_count: number | null;
     thumbnail?: string; // Optional since API doesn't return this
+    thumbnail_str?: string; // Base64 encoded thumbnail string
   }
 
   // Replace the hardcoded documents array with state
@@ -506,7 +521,35 @@ export default function Documents() {
               >
                 {/* Thumbnail with hover overlay */}
                 <div className="relative aspect-square bg-gray-100">
-                  {doc.thumbnail ? (
+                  {doc.thumbnail_str ? (
+                    <>
+                      <div className="relative w-full h-full">
+                        <img
+                          src={getImageUrlFromBase64(doc.thumbnail_str) || ''}
+                          alt={doc.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.log('Image failed to load for document:', doc.id);
+                            // Try direct display of the fallback instead of DOM manipulation
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            // Get the fallback element by id
+                            const fallbackEl = document.getElementById(`fallback-${doc.id}`);
+                            if (fallbackEl) {
+                              fallbackEl.style.display = 'flex';
+                            }
+                          }}
+                        />
+                        <div 
+                          id={`fallback-${doc.id}`} 
+                          className="absolute inset-0 w-full h-full items-center justify-center" 
+                          style={{ display: 'none' }}
+                        >
+                          <FileText className="w-16 h-16 text-gray-300" />
+                        </div>
+                      </div>
+                    </>
+                  ) : doc.thumbnail ? (
                     <>
                       <img
                         src={doc.thumbnail}
