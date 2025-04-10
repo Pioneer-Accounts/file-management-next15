@@ -264,40 +264,43 @@ export function NewDocumentModal({
       const formData = new FormData();
 
       // Add document creation date
-      formData.append('created', creationDate ? format(creationDate, "yyyy-MM-dd") : "");
+      formData.append(
+        "created",
+        creationDate ? format(creationDate, "yyyy-MM-dd") : ""
+      );
 
       // Add the document file as binary blob
       if (files.length > 0) {
-        formData.append('document', files[0]);
+        formData.append("document", files[0]);
       }
 
       // Add document title
-      formData.append('title', newDocTitle);
+      formData.append("title", newDocTitle);
 
       // Add correspondent if selected
       if (selectedCorrespondent) {
-        formData.append('correspondent', selectedCorrespondent);
+        formData.append("correspondent", selectedCorrespondent);
       } else {
-        formData.append('correspondent', '');
+        formData.append("correspondent", "");
       }
 
       // Add document type if selected
       if (selectedDocTypeId) {
-        formData.append('document_type', selectedDocTypeId.toString());
+        formData.append("document_type", selectedDocTypeId.toString());
       } else {
-        formData.append('document_type', '');
+        formData.append("document_type", "");
       }
 
       // Add tags if selected
       if (newDocTags.length > 0) {
-        newDocTags.forEach(tagId => {
-          formData.append('tags', tagId.toString());
+        newDocTags.forEach((tagId) => {
+          formData.append("tags", tagId.toString());
         });
       }
 
       // Add project ID if provided
       if (projectId) {
-        formData.append('Project', projectId);
+        formData.append("project", projectId);
       }
 
       console.log("Uploading document with FormData");
@@ -306,7 +309,7 @@ export function NewDocumentModal({
       const response = await fetch("http://localhost:8000/documents/", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${accessToken}`
+          Authorization: `Bearer ${accessToken}`,
           // Don't set Content-Type manually - the browser will set it with the correct boundary
         },
         body: formData,
@@ -315,7 +318,9 @@ export function NewDocumentModal({
       if (!response.ok) {
         const errorText = await response.text();
         console.error("API Error:", errorText);
-        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Upload failed: ${response.status} ${response.statusText}`
+        );
       }
 
       // Process successful response
@@ -323,7 +328,7 @@ export function NewDocumentModal({
       console.log("Document uploaded successfully:", responseData);
 
       // Files have already been uploaded as part of the FormData
-      
+
       // Check if we have document ID in the response and notes to save
       if (responseData && responseData.id && notes) {
         try {
@@ -332,18 +337,20 @@ export function NewDocumentModal({
             method: "POST",
             headers: {
               Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
               note: notes,
-              document: responseData.id
+              document: responseData.id,
             }),
           });
-          
+
           if (!notesResponse.ok) {
             const errorText = await notesResponse.text();
             console.error("Notes API Error:", errorText);
-            console.warn(`Failed to save notes: ${notesResponse.status} ${notesResponse.statusText}`);
+            console.warn(
+              `Failed to save notes: ${notesResponse.status} ${notesResponse.statusText}`
+            );
             // We don't throw here as we don't want to fail the whole process if just notes fail
           } else {
             const notesData = await notesResponse.json();
