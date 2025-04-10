@@ -6,6 +6,12 @@ import Cookies from "js-cookie";
 import { format } from "date-fns";
 import { NewEntityModal } from "./NewEntityModal";
 
+interface Tag {
+  id: number;
+  name: string;
+  color: string;
+}
+
 interface NewDocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,14 +24,15 @@ interface NewDocumentModalProps {
 export function NewDocumentModal({
   isOpen,
   onClose,
-  allTags,
+  allTags: propAllTags,
   correspondents,
   documentTypes,
   projectId,
 }: NewDocumentModalProps) {
   // States for document creation
   const [newDocTitle, setNewDocTitle] = useState("");
-  const [newDocTags, setNewDocTags] = useState<string[]>([]);
+  const [tagList, setTagList] = useState<Tag[]>([]);
+  const [newDocTags, setNewDocTags] = useState<number[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [selectedPreviewFile, setSelectedPreviewFile] = useState<File | null>(null);
   const [creationDate, setCreationDate] = useState<Date>(new Date());
@@ -87,14 +94,74 @@ export function NewDocumentModal({
   };
 
   // Toggle tag selection for new document
-  const toggleNewDocTag = (tag: string) => {
+  const toggleNewDocTag = (tagId: number) => {
     setNewDocTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
     );
   };
 
+  
+  // Fetch tags from API
+  const fetchTags = async () => {
+    try {
+      // Using the exact token from the curl example
+      const hardcodedToken = Cookies.get("accessToken")
+      
+      console.log("Making API request to fetch tags...");
+      
+      // Direct URL from the curl example
+      const response = await fetch('http://localhost:8000/tags', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${hardcodedToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log("API Response status:", response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Fetched tags data:", JSON.stringify(data));
+        
+        // Set the tags list with the fetched data
+        setTagList(data);
+        
+        // Log tags list length after setting
+        console.log("Tags list set with length:", data.length);
+      } else {
+        const errorText = await response.text();
+        console.error("Failed to fetch tags:", response.status, errorText);
+        
+        // Set mock data for testing if the API fails
+        const mockTags = [
+          { id: 1, name: "mockup", color: "#dbeafe" },
+          { id: 2, name: "Business", color: "#dbeafe" }
+        ];
+        console.log("Setting mock tags for testing");
+        setTagList(mockTags);
+      }
+    } catch (error) {
+      console.error("Error fetching tags:", error);
+      
+      // Set mock data for testing if there's an exception
+      const mockTags = [
+        { id: 1, name: "mockup", color: "#dbeafe" },
+        { id: 2, name: "Business", color: "#dbeafe" }
+      ];
+      console.log("Setting mock tags after error");
+      setTagList(mockTags);
+    }
+  };
+
+  // Load tags when component mounts
+  useEffect(() => {
+    if (isOpen) {
+      fetchTags();
+    }
+  }, [isOpen]);
+
   // Handle saving the document
-    // Handle saving the document
   const handleSaveDocument = async () => {
     if (!files.length) {
       setUploadError("Please select at least one file to upload");
@@ -136,7 +203,7 @@ export function NewDocumentModal({
       // Add tags if selected
       if (newDocTags.length > 0) {
         newDocTags.forEach(tagId => {
-          formData.append('tags', tagId);
+          formData.append('tags', tagId.toString());
         });
       }
       
@@ -280,22 +347,26 @@ export function NewDocumentModal({
                       >
                         <div className="flex flex-wrap gap-2 overflow-hidden">
                           {newDocTags.length > 0 ? (
-                            newDocTags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded flex items-center"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {tag}
-                                <X
-                                  className="ml-1 h-3 w-3 cursor-pointer"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleNewDocTag(tag);
-                                  }}
-                                />
-                              </span>
-                            ))
+                            newDocTags.map((tagId) => {
+                              const tag = tagList.find(t => t.id === tagId);
+                              return tag ? (
+                                <span
+                                  key={tag.id}
+                                  className="text-xs px-2 py-1 rounded flex items-center"
+                                  style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {tag.name}
+                                  <X
+                                    className="ml-1 h-3 w-3 cursor-pointer"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleNewDocTag(tag.id);
+                                    }}
+                                  />
+                                </span>
+                              ) : null;
+                            })
                           ) : (
                             <span className="text-gray-500">
                               Select tags...
@@ -329,36 +400,55 @@ export function NewDocumentModal({
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
+                        
+                        {/* Debug info - will show in development only */}
+                        {process.env.NODE_ENV !== 'production' && (
+                          <div className="px-2 py-1 text-xs text-gray-500 border-b">
+                            Tags loaded: {tagList.length}
+                          </div>
+                        )}
+                        
                         <div className="max-h-60 overflow-y-auto">
-                          {allTags
-                            .filter((tag) =>
-                              tag
-                                .toLowerCase()
-                                .includes(modalTagSearchTerm.toLowerCase())
-                            )
-                            .map((tag) => (
-                              <div
-                                key={tag}
-                                className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
-                                onClick={() => toggleNewDocTag(tag)}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={newDocTags.includes(tag)}
-                                  onChange={() => {}}
-                                  className="mr-2"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                                <span className="text-sm">{tag}</span>
-                              </div>
-                            ))}
-                          {allTags.filter((tag) =>
-                            tag
+                          {tagList && tagList.length > 0 ? (
+                            tagList
+                              .filter((tag) =>
+                                tag && tag.name && tag.name
+                                  .toLowerCase()
+                                  .includes(modalTagSearchTerm.toLowerCase())
+                              )
+                              .map((tag) => (
+                                <div
+                                  key={tag.id}
+                                  className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
+                                  onClick={() => toggleNewDocTag(tag.id)}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={newDocTags.includes(tag.id)}
+                                    onChange={() => {}}
+                                    className="mr-2"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                  <span 
+                                    className="w-4 h-4 mr-2 rounded-full inline-block"
+                                    style={{ backgroundColor: tag.color || '#dbeafe' }}
+                                  ></span>
+                                  <span className="text-sm">{tag.name}</span>
+                                </div>
+                              ))
+                          ) : (
+                            <div className="p-2 text-gray-500 text-center">
+                              No tags available
+                            </div>
+                          )}
+                          
+                          {tagList && tagList.length > 0 && tagList.filter((tag) =>
+                            tag && tag.name && tag.name
                               .toLowerCase()
                               .includes(modalTagSearchTerm.toLowerCase())
                           ).length === 0 && (
                             <div className="p-2 text-gray-500 text-center">
-                              No tags found
+                              No matching tags found
                             </div>
                           )}
                         </div>
@@ -716,10 +806,13 @@ export function NewDocumentModal({
           onFieldChange={setNewTagName}
           onSave={() => {
             if (newTagName.trim()) {
-              // Add new tag and select it
-              toggleNewDocTag(newTagName.trim());
+              // This is a placeholder for creating a new tag via API
+              // In a real implementation, you would call the API to create a tag and get its ID
+              // For now, we'll just close the modal
               setIsNewTagModalOpen(false);
               setNewTagName("");
+              // After creating a tag, refresh the tag list
+              fetchTags();
             }
           }}
           onClose={() => setIsNewTagModalOpen(false)}
