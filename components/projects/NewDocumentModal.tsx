@@ -260,57 +260,69 @@ export function NewDocumentModal({
         throw new Error("Authentication token not found");
       }
 
-      // Create a FormData object for file upload
+      // Create a FormData object for file upload with binary blobs
       const formData = new FormData();
 
-      // Add file to FormData
+      // Add document creation date
+      formData.append('created', creationDate ? format(creationDate, "yyyy-MM-dd") : "");
+
+      // Add the document file as binary blob
       if (files.length > 0) {
-        formData.append("document", files[0]);
+        formData.append('document', files[0]);
       }
 
-      // Add other form fields
-      formData.append("title", newDocTitle);
+      // Add document title
+      formData.append('title', newDocTitle);
 
       // Add correspondent if selected
       if (selectedCorrespondent) {
-        formData.append("correspondent", selectedCorrespondent);
+        formData.append('correspondent', selectedCorrespondent);
+      } else {
+        formData.append('correspondent', '');
       }
 
       // Add document type if selected
       if (selectedDocTypeId) {
-        formData.append("document_type", selectedDocTypeId.toString());
+        formData.append('document_type', selectedDocTypeId.toString());
+      } else {
+        formData.append('document_type', '');
       }
 
       // Add tags if selected
       if (newDocTags.length > 0) {
-        newDocTags.forEach((tagId) => {
-          formData.append("tags", tagId.toString());
+        newDocTags.forEach(tagId => {
+          formData.append('tags', tagId.toString());
         });
       }
 
       // Add project ID if provided
       if (projectId) {
-        formData.append("Project", projectId);
+        formData.append('Project', projectId);
       }
 
-      // Send the request to the API
+      console.log("Uploading document with FormData");
+
+      // Send the request to the API with FormData (multipart/form-data)
       const response = await fetch("http://localhost:8000/documents/", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${accessToken}`,
-          // Don't set Content-Type here, the browser will set it automatically with the boundary
+          Authorization: `Bearer ${accessToken}`
+          // Don't set Content-Type manually - the browser will set it with the correct boundary
         },
         body: formData,
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.detail || `Error: ${response.status}`);
+        const errorText = await response.text();
+        console.error("API Error:", errorText);
+        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
       }
 
       // Process successful response
       const responseData = await response.json();
       console.log("Document uploaded successfully:", responseData);
+
+      // Files have already been uploaded as part of the FormData
 
       // Reset form and close modal
       resetForm();
