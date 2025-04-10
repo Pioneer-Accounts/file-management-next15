@@ -12,6 +12,11 @@ interface Tag {
   color: string;
 }
 
+interface DocumentType {
+  id: number;
+  name: string;
+}
+
 interface NewDocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,7 +31,7 @@ export function NewDocumentModal({
   onClose,
   allTags: propAllTags,
   correspondents,
-  documentTypes,
+  documentTypes: propDocumentTypes,
   projectId,
 }: NewDocumentModalProps) {
   // States for document creation
@@ -34,17 +39,21 @@ export function NewDocumentModal({
   const [tagList, setTagList] = useState<Tag[]>([]);
   const [newDocTags, setNewDocTags] = useState<number[]>([]);
   const [files, setFiles] = useState<File[]>([]);
-  const [selectedPreviewFile, setSelectedPreviewFile] = useState<File | null>(null);
+  const [selectedPreviewFile, setSelectedPreviewFile] = useState<File | null>(
+    null
+  );
   const [creationDate, setCreationDate] = useState<Date>(new Date());
   const [notes, setNotes] = useState<string>("");
-  const [selectedCorrespondent, setSelectedCorrespondent] = useState<string>("");
+  const [selectedCorrespondent, setSelectedCorrespondent] =
+    useState<string>("");
   const [documentType, setDocumentType] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // State for dropdowns
   const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
-  const [isCorrespondentDropdownOpen, setIsCorrespondentDropdownOpen] = useState(false);
+  const [isCorrespondentDropdownOpen, setIsCorrespondentDropdownOpen] =
+    useState(false);
   const [isDocTypeDropdownOpen, setIsDocTypeDropdownOpen] = useState(false);
   const [modalTagSearchTerm, setModalTagSearchTerm] = useState("");
   const [correspondentSearchTerm, setCorrespondentSearchTerm] = useState("");
@@ -52,7 +61,8 @@ export function NewDocumentModal({
   // State for new entity modals
   const [isNewTagModalOpen, setIsNewTagModalOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
-  const [isNewCorrespondentModalOpen, setIsNewCorrespondentModalOpen] = useState(false);
+  const [isNewCorrespondentModalOpen, setIsNewCorrespondentModalOpen] =
+    useState(false);
   const [newCorrespondentName, setNewCorrespondentName] = useState("");
   const [isNewDocTypeModalOpen, setIsNewDocTypeModalOpen] = useState(false);
   const [newDocTypeName, setNewDocTypeName] = useState("");
@@ -63,6 +73,15 @@ export function NewDocumentModal({
   const correspondentDropdownRef = useRef<HTMLDivElement>(null);
   const documentTypeDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [documentTypesList, setDocumentTypesList] = useState<DocumentType[]>(
+    []
+  );
+  const [isLoadingDocTypes, setIsLoadingDocTypes] = useState(false);
+  const [docTypeError, setDocTypeError] = useState<string | null>(null);
+  const [selectedDocTypeId, setSelectedDocTypeId] = useState<number | null>(
+    null
+  );
 
   // Handle file drop
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -96,58 +115,59 @@ export function NewDocumentModal({
   // Toggle tag selection for new document
   const toggleNewDocTag = (tagId: number) => {
     setNewDocTags((prev) =>
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId]
     );
   };
 
-  
   // Fetch tags from API
   const fetchTags = async () => {
     try {
       // Using the exact token from the curl example
-      const hardcodedToken = Cookies.get("accessToken")
-      
+      const hardcodedToken = Cookies.get("accessToken");
+
       console.log("Making API request to fetch tags...");
-      
+
       // Direct URL from the curl example
-      const response = await fetch('http://localhost:8000/tags', {
-        method: 'GET',
+      const response = await fetch("http://localhost:8000/tags", {
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${hardcodedToken}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${hardcodedToken}`,
+          "Content-Type": "application/json",
+        },
       });
-      
+
       console.log("API Response status:", response.status);
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log("Fetched tags data:", JSON.stringify(data));
-        
+
         // Set the tags list with the fetched data
         setTagList(data);
-        
+
         // Log tags list length after setting
         console.log("Tags list set with length:", data.length);
       } else {
         const errorText = await response.text();
         console.error("Failed to fetch tags:", response.status, errorText);
-        
+
         // Set mock data for testing if the API fails
         const mockTags = [
           { id: 1, name: "mockup", color: "#dbeafe" },
-          { id: 2, name: "Business", color: "#dbeafe" }
+          { id: 2, name: "Business", color: "#dbeafe" },
         ];
         console.log("Setting mock tags for testing");
         setTagList(mockTags);
       }
     } catch (error) {
       console.error("Error fetching tags:", error);
-      
+
       // Set mock data for testing if there's an exception
       const mockTags = [
         { id: 1, name: "mockup", color: "#dbeafe" },
-        { id: 2, name: "Business", color: "#dbeafe" }
+        { id: 2, name: "Business", color: "#dbeafe" },
       ];
       console.log("Setting mock tags after error");
       setTagList(mockTags);
@@ -158,8 +178,69 @@ export function NewDocumentModal({
   useEffect(() => {
     if (isOpen) {
       fetchTags();
+      fetchDocumentTypes();
     }
   }, [isOpen]);
+
+  // Fetch document types from API
+  const fetchDocumentTypes = async () => {
+    try {
+      setIsLoadingDocTypes(true);
+      setDocTypeError(null);
+
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      console.log("Making API request to fetch document types...");
+
+      const response = await fetch("http://localhost:8000/document-type/", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("API Response status:", response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Fetched document types data:", JSON.stringify(data));
+
+        setDocumentTypesList(data);
+      } else {
+        const errorText = await response.text();
+        console.error(
+          "Failed to fetch document types:",
+          response.status,
+          errorText
+        );
+
+        // Set mock data for testing if the API fails
+        const mockDocTypes = [
+          { id: 1, name: "Contract" },
+          { id: 3, name: "Invoice" },
+        ];
+        console.log("Setting mock document types for testing");
+        setDocumentTypesList(mockDocTypes);
+      }
+    } catch (error) {
+      console.error("Error fetching document types:", error);
+
+      // Set mock data for testing if there's an exception
+      const mockDocTypes = [
+        { id: 1, name: "Contract" },
+        { id: 3, name: "Invoice" },
+      ];
+      console.log("Setting mock document types after error");
+      setDocumentTypesList(mockDocTypes);
+    } finally {
+      setIsLoadingDocTypes(false);
+    }
+  };
 
   // Handle saving the document
   const handleSaveDocument = async () => {
@@ -171,7 +252,7 @@ export function NewDocumentModal({
     try {
       setIsUploading(true);
       setUploadError(null);
-      
+
       // Get access token from cookies
       const accessToken = Cookies.get("accessToken");
 
@@ -181,42 +262,42 @@ export function NewDocumentModal({
 
       // Create a FormData object for file upload
       const formData = new FormData();
-      
+
       // Add file to FormData
       if (files.length > 0) {
-        formData.append('document', files[0]);
+        formData.append("document", files[0]);
       }
-      
+
       // Add other form fields
-      formData.append('title', newDocTitle);
-      
+      formData.append("title", newDocTitle);
+
       // Add correspondent if selected
       if (selectedCorrespondent) {
-        formData.append('correspondent', selectedCorrespondent);
+        formData.append("correspondent", selectedCorrespondent);
       }
-      
+
       // Add document type if selected
-      if (documentType) {
-        formData.append('document_type', documentType);
+      if (selectedDocTypeId) {
+        formData.append("document_type", selectedDocTypeId.toString());
       }
-      
+
       // Add tags if selected
       if (newDocTags.length > 0) {
-        newDocTags.forEach(tagId => {
-          formData.append('tags', tagId.toString());
+        newDocTags.forEach((tagId) => {
+          formData.append("tags", tagId.toString());
         });
       }
-      
+
       // Add project ID if provided
       if (projectId) {
-        formData.append('Project', projectId);
+        formData.append("Project", projectId);
       }
-      
+
       // Send the request to the API
-      const response = await fetch('http://localhost:8000/documents/', {
-        method: 'POST',
+      const response = await fetch("http://localhost:8000/documents/", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${accessToken}`
+          Authorization: `Bearer ${accessToken}`,
           // Don't set Content-Type here, the browser will set it automatically with the boundary
         },
         body: formData,
@@ -229,14 +310,16 @@ export function NewDocumentModal({
 
       // Process successful response
       const responseData = await response.json();
-      console.log('Document uploaded successfully:', responseData);
-      
+      console.log("Document uploaded successfully:", responseData);
+
       // Reset form and close modal
       resetForm();
       onClose();
     } catch (error) {
-      console.error('Failed to upload document:', error);
-      setUploadError(error instanceof Error ? error.message : 'An unknown error occurred');
+      console.error("Failed to upload document:", error);
+      setUploadError(
+        error instanceof Error ? error.message : "An unknown error occurred"
+      );
     } finally {
       setIsUploading(false);
     }
@@ -348,12 +431,15 @@ export function NewDocumentModal({
                         <div className="flex flex-wrap gap-2 overflow-hidden">
                           {newDocTags.length > 0 ? (
                             newDocTags.map((tagId) => {
-                              const tag = tagList.find(t => t.id === tagId);
+                              const tag = tagList.find((t) => t.id === tagId);
                               return tag ? (
                                 <span
                                   key={tag.id}
                                   className="text-xs px-2 py-1 rounded flex items-center"
-                                  style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                                  style={{
+                                    backgroundColor: `${tag.color}20`,
+                                    color: tag.color,
+                                  }}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   {tag.name}
@@ -400,21 +486,24 @@ export function NewDocumentModal({
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
-                        
+
                         {/* Debug info - will show in development only */}
-                        {process.env.NODE_ENV !== 'production' && (
+                        {process.env.NODE_ENV !== "production" && (
                           <div className="px-2 py-1 text-xs text-gray-500 border-b">
                             Tags loaded: {tagList.length}
                           </div>
                         )}
-                        
+
                         <div className="max-h-60 overflow-y-auto">
                           {tagList && tagList.length > 0 ? (
                             tagList
-                              .filter((tag) =>
-                                tag && tag.name && tag.name
-                                  .toLowerCase()
-                                  .includes(modalTagSearchTerm.toLowerCase())
+                              .filter(
+                                (tag) =>
+                                  tag &&
+                                  tag.name &&
+                                  tag.name
+                                    .toLowerCase()
+                                    .includes(modalTagSearchTerm.toLowerCase())
                               )
                               .map((tag) => (
                                 <div
@@ -429,9 +518,11 @@ export function NewDocumentModal({
                                     className="mr-2"
                                     onClick={(e) => e.stopPropagation()}
                                   />
-                                  <span 
+                                  <span
                                     className="w-4 h-4 mr-2 rounded-full inline-block"
-                                    style={{ backgroundColor: tag.color || '#dbeafe' }}
+                                    style={{
+                                      backgroundColor: tag.color || "#dbeafe",
+                                    }}
                                   ></span>
                                   <span className="text-sm">{tag.name}</span>
                                 </div>
@@ -441,16 +532,21 @@ export function NewDocumentModal({
                               No tags available
                             </div>
                           )}
-                          
-                          {tagList && tagList.length > 0 && tagList.filter((tag) =>
-                            tag && tag.name && tag.name
-                              .toLowerCase()
-                              .includes(modalTagSearchTerm.toLowerCase())
-                          ).length === 0 && (
-                            <div className="p-2 text-gray-500 text-center">
-                              No matching tags found
-                            </div>
-                          )}
+
+                          {tagList &&
+                            tagList.length > 0 &&
+                            tagList.filter(
+                              (tag) =>
+                                tag &&
+                                tag.name &&
+                                tag.name
+                                  .toLowerCase()
+                                  .includes(modalTagSearchTerm.toLowerCase())
+                            ).length === 0 && (
+                              <div className="p-2 text-gray-500 text-center">
+                                No matching tags found
+                              </div>
+                            )}
                         </div>
                       </div>
                     )}
@@ -532,9 +628,7 @@ export function NewDocumentModal({
                             .filter((c) =>
                               c.name
                                 .toLowerCase()
-                                .includes(
-                                  correspondentSearchTerm.toLowerCase()
-                                )
+                                .includes(correspondentSearchTerm.toLowerCase())
                             )
                             .map((correspondent) => (
                               <div
@@ -545,9 +639,7 @@ export function NewDocumentModal({
                                     : ""
                                 }`}
                                 onClick={() => {
-                                  setSelectedCorrespondent(
-                                    correspondent.id
-                                  );
+                                  setSelectedCorrespondent(correspondent.id);
                                   setIsCorrespondentDropdownOpen(false);
                                   setCorrespondentSearchTerm("");
                                 }}
@@ -558,9 +650,7 @@ export function NewDocumentModal({
                           {correspondents.filter((c) =>
                             c.name
                               .toLowerCase()
-                              .includes(
-                                correspondentSearchTerm.toLowerCase()
-                              )
+                              .includes(correspondentSearchTerm.toLowerCase())
                           ).length === 0 && (
                             <div className="p-2 text-gray-500 text-center">
                               No correspondent found
@@ -586,7 +676,11 @@ export function NewDocumentModal({
                         }
                       >
                         <span>
-                          {documentType || "Select document type..."}
+                          {selectedDocTypeId
+                            ? documentTypesList.find(
+                                (dt) => dt.id === selectedDocTypeId
+                              )?.name
+                            : "Select document type..."}
                         </span>
                         <ChevronDown className="h-4 w-4" />
                       </div>
@@ -603,20 +697,60 @@ export function NewDocumentModal({
 
                     {isDocTypeDropdownOpen && (
                       <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        {documentTypes.map((type) => (
-                          <div
-                            key={type}
-                            className={`p-2 hover:bg-gray-100 cursor-pointer ${
-                              documentType === type ? "bg-blue-50" : ""
-                            }`}
-                            onClick={() => {
-                              setDocumentType(type);
-                              setIsDocTypeDropdownOpen(false);
-                            }}
-                          >
-                            {type}
+                        {/* Debug info - will show in development only */}
+                        {process.env.NODE_ENV !== "production" && (
+                          <div className="px-2 py-1 text-xs text-gray-500 border-b">
+                            Document types loaded: {documentTypesList.length}
                           </div>
-                        ))}
+                        )}
+
+                        {isLoadingDocTypes ? (
+                          <div className="p-4 text-center">
+                            <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+                            <p className="mt-2 text-sm text-gray-500">
+                              Loading document types...
+                            </p>
+                          </div>
+                        ) : docTypeError ? (
+                          <div className="p-4 text-center text-red-500">
+                            {docTypeError}
+                            <button
+                              className="block mx-auto mt-2 text-blue-500 hover:text-blue-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                fetchDocumentTypes();
+                              }}
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        ) : (
+                          documentTypesList.map((docType) => (
+                            <div
+                              key={docType.id}
+                              className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                                selectedDocTypeId === docType.id
+                                  ? "bg-blue-50"
+                                  : ""
+                              }`}
+                              onClick={() => {
+                                setSelectedDocTypeId(docType.id);
+                                setDocumentType(docType.name); // Keep this for backward compatibility
+                                setIsDocTypeDropdownOpen(false);
+                              }}
+                            >
+                              {docType.name}
+                            </div>
+                          ))
+                        )}
+
+                        {!isLoadingDocTypes &&
+                          !docTypeError &&
+                          documentTypesList.length === 0 && (
+                            <div className="p-2 text-gray-500 text-center">
+                              No document types available
+                            </div>
+                          )}
                       </div>
                     )}
                   </div>
@@ -679,9 +813,7 @@ export function NewDocumentModal({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setFiles(
-                                  files.filter((_, i) => i !== index)
-                                );
+                                setFiles(files.filter((_, i) => i !== index));
                                 if (selectedPreviewFile === file) {
                                   setSelectedPreviewFile(
                                     files.length > 1 ? files[0] : null
@@ -832,10 +964,10 @@ export function NewDocumentModal({
               const newId = (
                 Math.max(...correspondents.map((c) => parseInt(c.id))) + 1
               ).toString();
-              
+
               // Select the new correspondent
               setSelectedCorrespondent(newId);
-              
+
               // Close the modal and reset
               setIsNewCorrespondentModalOpen(false);
               setNewCorrespondentName("");
@@ -856,7 +988,7 @@ export function NewDocumentModal({
             if (newDocTypeName.trim()) {
               // Set the new document type
               setDocumentType(newDocTypeName.trim());
-              
+
               // Close the modal and reset
               setIsNewDocTypeModalOpen(false);
               setNewDocTypeName("");
