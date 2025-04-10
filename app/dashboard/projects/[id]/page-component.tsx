@@ -6,6 +6,7 @@ import { ProjectHeader } from "@/components/projects/ProjectHeader";
 import { SearchFilterBar } from "@/components/projects/SearchFilterBar";
 import { DocumentCard } from "@/components/projects/DocumentCard";
 import { NewDocumentModal } from "@/components/projects/NewDocumentModal";
+import { FileText } from "lucide-react";
 import Cookies from "js-cookie";
 
 // Helper function to determine financial year from date
@@ -35,6 +36,22 @@ interface Project {
   start_date: string | null;
 }
 
+// Define Document interface based on API response
+interface Document {
+  id: number;
+  title: string;
+  tags: number[];
+  created_date: string;
+  page_count: number | null;
+  thumbnail_str?: string; // Base64 encoded thumbnail string
+}
+
+interface Tag {
+  id: number;
+  name: string;
+  color: string;
+}
+
 export default function ProjectDetailPage() {
   // Get the project ID from the URL
   const params = useParams();
@@ -55,58 +72,41 @@ export default function ProjectDetailPage() {
   });
 
   const [isLoading, setIsLoading] = useState(true);
+  
+  // State for search term, documents, and tags
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [tags, setTags] = useState<Tag[]>([]);
 
   // Fetch project data from API
   useEffect(() => {
-    async function fetchProject() {
-      try {
-        const accessToken = Cookies.get("accessToken");
+    fetchProject();
+    fetchDocuments();
+    fetchTags();
+  }, [projectId]);
 
-        if (!accessToken) {
-          throw new Error("Authentication token not found");
+  // Function to fetch project data from API
+  async function fetchProject() {
+    try {
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch(
+        `http://localhost:8000/projects/${projectId}/`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
         }
+      );
 
-        const response = await fetch(
-          `http://localhost:8000/projects/${projectId}/`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          // If API call fails, try to use query params as fallback
-          const title = searchParams.get("title");
-          const description = searchParams.get("description");
-
-          if (title) {
-            setProject({
-              id: projectId,
-              name: title,
-              description: description || "",
-              color: "bg-blue-100",
-            });
-            return;
-          }
-
-          throw new Error(`Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        // Map API response to project format
-        setProject({
-          id: data.id.toString(),
-          name: data.title,
-          description: data.description,
-          color: "bg-blue-100", // Static color as requested
-        });
-      } catch (error) {
-        console.error("Failed to fetch project:", error);
-        // If there's an error, check if we have query params to use
+      if (!response.ok) {
+        // If API call fails, try to use query params as fallback
         const title = searchParams.get("title");
         const description = searchParams.get("description");
 
@@ -117,14 +117,103 @@ export default function ProjectDetailPage() {
             description: description || "",
             color: "bg-blue-100",
           });
+          return;
         }
-      } finally {
-        setIsLoading(false);
-      }
-    }
 
-    fetchProject();
-  }, [projectId, searchParams]);
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Map API response to project format
+      setProject({
+        id: data.id.toString(),
+        name: data.title,
+        description: data.description,
+        color: "bg-blue-100", // Static color as requested
+      });
+
+    } catch (error) {
+      console.error("Failed to fetch project:", error);
+      // If there's an error, check if we have query params to use
+      const title = searchParams.get("title");
+      const description = searchParams.get("description");
+
+      if (title) {
+        setProject({
+          id: projectId,
+          name: title,
+          description: description || "",
+          color: "bg-blue-100",
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Function to fetch documents for the project
+  const fetchDocuments = async () => {
+    setIsLoadingDocuments(true);
+    try {
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch(
+        `http://localhost:8000/documents/?project=${projectId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setDocuments(data.results);
+    } catch (error) {
+      console.error("Failed to fetch documents:", error);
+      // Handle error - show error message to user
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  };
+
+  // Function to fetch tags from API
+  const fetchTags = async () => {
+    try {
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch("http://localhost:8000/tags", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setTags(data);
+    } catch (error) {
+      console.error("Failed to fetch tags:", error);
+    }
+  };
 
   // States for filtering and searching
   const [searchTerm, setSearchTerm] = useState("");
@@ -143,37 +232,17 @@ export default function ProjectDetailPage() {
     "AY - 2020-21",
   ];
 
-  // Sample project documents
-  const documents = [
-    {
-      id: 1,
-      title: `${project.name} Doc 1`,
-      date: "Apr 3, 2025",
-      tags: ["design", "prototype"],
-      thumbnail: "/signup.jpg",
-    },
-    {
-      id: 2,
-      title: `${project.name} Doc 2`,
-      date: "Apr 2, 2025",
-      tags: ["wireframe", "mockup"],
-      thumbnail: "/signup.jpg",
-    },
-    {
-      id: 3,
-      title: `${project.name} Doc 3`,
-      date: "Apr 1, 2025",
-      tags: ["final", "approved"],
-      thumbnail: "/signup.jpg",
-    },
-    {
-      id: 4,
-      title: `${project.name} Doc 4`,
-      date: "Mar 30, 2025",
-      tags: ["revision", "draft"],
-      thumbnail: "/signup.jpg",
-    },
-  ];
+  // Helper function to process base64 string to data URL
+  function getImageUrlFromBase64(base64String: string | undefined): string | null {
+    if (!base64String) return null;
+    try {
+      // Try to determine the type of image from the base64 data
+      return `data:image/*;base64,${base64String}`;
+    } catch (e) {
+      console.error('Error processing base64 image:', e);
+      return null;
+    }
+  }
 
   // Sample data for tags
   const allTags = [
@@ -222,25 +291,17 @@ export default function ProjectDetailPage() {
       searchTerm === "" ||
       doc.title.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Tag filter
-    const matchesTags =
-      selectedTags.length === 0 ||
-      selectedTags.some((tag) => doc.tags.includes(tag));
+    // Tag filter - we'd need to fetch tag names to match by name
+    // For now, we'll just assume they're empty
+    const matchesTags = selectedTags.length === 0;
 
     // Financial Year filter
-    // For demonstration, we'll assume the document date can be used to determine the financial year
-    // In a real application, you would have a specific financial year field
-    const docDate = new Date(doc.date);
-    const docFinancialYear = getFinancialYearFromDate(docDate);
-    const matchesFinancialYear =
-      !selectedFinancialYear || docFinancialYear === selectedFinancialYear;
+    // We'll skip financial year filtering since API documents don't have this field directly
+    const matchesFinancialYear = !selectedFinancialYear || true;
 
     // Document Type filter
-    // For demonstration, we'll assume each document has a type property
-    // In a real application, you would have this data
-    const docType = doc.id % 2 === 0 ? "Invoice" : "Contract"; // Mock document type based on ID
-    const matchesDocumentType =
-      !selectedDocumentType || docType === selectedDocumentType;
+    // We'll skip document type filtering since API documents don't have this field directly
+    const matchesDocumentType = !selectedDocumentType || true;
 
     return (
       matchesSearch &&
@@ -272,10 +333,121 @@ export default function ProjectDetailPage() {
       />
 
       {/* Project Documents Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {filteredDocuments.map((doc) => (
-          <DocumentCard key={doc.id} document={doc} />
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        {isLoadingDocuments ? (
+          // Loading state for documents
+          Array(5)
+            .fill(0)
+            .map((_, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+              >
+                <div className="relative aspect-square bg-gray-100 animate-pulse"></div>
+                <div className="p-4">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2"></div>
+                </div>
+              </div>
+            ))
+        ) : filteredDocuments.length > 0 ? (
+          filteredDocuments.map((doc) => (
+            <div
+              key={doc.id}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all group"
+            >
+              {/* Thumbnail with hover overlay */}
+              <div className="relative aspect-square bg-gray-100">
+                {doc.thumbnail_str ? (
+                  <>
+                    <div className="relative w-full h-full">
+                      <img
+                        src={getImageUrlFromBase64(doc.thumbnail_str) || ''}
+                        alt={doc.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.log('Image failed to load for document:', doc.id);
+                          // Try direct display of the fallback instead of DOM manipulation
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          // Get the fallback element by id
+                          const fallbackEl = document.getElementById(`fallback-${doc.id}`);
+                          if (fallbackEl) {
+                            fallbackEl.style.display = 'flex';
+                          }
+                        }}
+                      />
+                      <div 
+                        id={`fallback-${doc.id}`} 
+                        className="absolute inset-0 w-full h-full items-center justify-center" 
+                        style={{ display: 'none' }}
+                      >
+                        <FileText className="w-16 h-16 text-gray-300" />
+                      </div>
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <FileText className="w-16 h-16 text-gray-300" />
+                  </div>
+                )}
+
+                {/* Tags */}
+                {doc.tags && doc.tags.length > 0 && (
+                  <div className="absolute top-3 left-3 flex flex-wrap gap-1">
+                    {doc.tags.map((tagId, index) => {
+                      // Find the tag object that matches the ID
+                      const tag = tags.find((t) => t.id === tagId);
+                      return (
+                        <span
+                          key={index}
+                          className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
+                          style={tag?.color ? { backgroundColor: tag.color } : undefined}
+                        >
+                          {tag ? tag.name : `Tag ${tagId}`}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Document info */}
+              <div className="p-4">
+                <h3 className="text-sm font-medium text-gray-800 line-clamp-1">
+                  {doc.title}
+                </h3>
+                <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                  {doc.created_date && (
+                    <span>
+                      {new Date(doc.created_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  )}
+                  {doc.page_count !== null && (
+                    <span>
+                      {doc.page_count} {doc.page_count === 1 ? 'page' : 'pages'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full flex flex-col items-center justify-center py-10 text-center">
+            <FileText className="h-12 w-12 text-gray-300 mb-3" />
+            <h3 className="text-lg font-medium text-gray-700">
+              No documents found
+            </h3>
+            <p className="text-gray-500 mt-1">
+              Upload documents to this project to get started
+            </p>
+          </div>
+        )}
       </div>
 
       {/* New Document Modal */}
