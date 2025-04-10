@@ -323,6 +323,37 @@ export function NewDocumentModal({
       console.log("Document uploaded successfully:", responseData);
 
       // Files have already been uploaded as part of the FormData
+      
+      // Check if we have document ID in the response and notes to save
+      if (responseData && responseData.id && notes) {
+        try {
+          // Call the notes API to save notes for this document
+          const notesResponse = await fetch("http://localhost:8000/notes/", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              note: notes,
+              document: responseData.id
+            }),
+          });
+          
+          if (!notesResponse.ok) {
+            const errorText = await notesResponse.text();
+            console.error("Notes API Error:", errorText);
+            console.warn(`Failed to save notes: ${notesResponse.status} ${notesResponse.statusText}`);
+            // We don't throw here as we don't want to fail the whole process if just notes fail
+          } else {
+            const notesData = await notesResponse.json();
+            console.log("Notes saved successfully:", notesData);
+          }
+        } catch (noteError) {
+          console.error("Error saving notes:", noteError);
+          // We don't throw here as the document was still successfully uploaded
+        }
+      }
 
       // Reset form and close modal
       resetForm();
