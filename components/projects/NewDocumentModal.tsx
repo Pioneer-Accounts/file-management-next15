@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { X, Plus, Upload, FileText, ChevronDown } from "lucide-react";
+import Cookies from "js-cookie";
+import { format } from "date-fns";
+import { NewEntityModal } from "./NewEntityModal";
 
 interface NewDocumentModalProps {
   isOpen: boolean;
@@ -9,6 +12,7 @@ interface NewDocumentModalProps {
   allTags: string[];
   correspondents: { id: string; name: string }[];
   documentTypes: string[];
+  projectId?: string; // Optional project ID for associating document with project
 }
 
 export function NewDocumentModal({
@@ -17,6 +21,7 @@ export function NewDocumentModal({
   allTags,
   correspondents,
   documentTypes,
+  projectId,
 }: NewDocumentModalProps) {
   // States for document creation
   const [newDocTitle, setNewDocTitle] = useState("");
@@ -27,6 +32,8 @@ export function NewDocumentModal({
   const [notes, setNotes] = useState<string>("");
   const [selectedCorrespondent, setSelectedCorrespondent] = useState<string>("");
   const [documentType, setDocumentType] = useState<string>("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // State for dropdowns
   const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
@@ -87,23 +94,85 @@ export function NewDocumentModal({
   };
 
   // Handle saving the document
-  const handleSaveDocument = () => {
-    // Process the document data
-    const documentData = {
-      title: newDocTitle,
-      tags: newDocTags,
-      creationDate,
-      correspondent: selectedCorrespondent,
-      documentType,
-      notes,
-      files,
-    };
-    
-    console.log(documentData);
-    
-    // Reset form and close modal
-    resetForm();
-    onClose();
+    // Handle saving the document
+  const handleSaveDocument = async () => {
+    if (!files.length) {
+      setUploadError("Please select at least one file to upload");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      setUploadError(null);
+      
+      // Get access token from cookies
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      // Create a FormData object for file upload
+      const formData = new FormData();
+      
+      // Add file to FormData
+      if (files.length > 0) {
+        formData.append('document', files[0]);
+      }
+      
+      // Add other form fields
+      formData.append('title', newDocTitle);
+      
+      // Add correspondent if selected
+      if (selectedCorrespondent) {
+        formData.append('correspondent', selectedCorrespondent);
+      }
+      
+      // Add document type if selected
+      if (documentType) {
+        formData.append('document_type', documentType);
+      }
+      
+      // Add tags if selected
+      if (newDocTags.length > 0) {
+        newDocTags.forEach(tagId => {
+          formData.append('tags', tagId);
+        });
+      }
+      
+      // Add project ID if provided
+      if (projectId) {
+        formData.append('Project', projectId);
+      }
+      
+      // Send the request to the API
+      const response = await fetch('http://localhost:8000/documents/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+          // Don't set Content-Type here, the browser will set it automatically with the boundary
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail || `Error: ${response.status}`);
+      }
+
+      // Process successful response
+      const responseData = await response.json();
+      console.log('Document uploaded successfully:', responseData);
+      
+      // Reset form and close modal
+      resetForm();
+      onClose();
+    } catch (error) {
+      console.error('Failed to upload document:', error);
+      setUploadError(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Reset all form fields
@@ -592,23 +661,48 @@ export function NewDocumentModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t flex justify-end space-x-2">
+        <div className="p-4 border-t flex justify-end items-center space-x-2">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            disabled={isUploading}
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleSaveDocument}
-            disabled={!newDocTitle || files.length === 0}
-            className={`px-4 py-2 rounded-md text-white ${
-              !newDocTitle || files.length === 0
-                ? "bg-blue-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-md flex items-center transition-colors"
+            disabled={isUploading || !newDocTitle || !files.length}
           >
-            Add Document
+            {isUploading ? (
+              <>
+                <svg
+                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Uploading...
+              </>
+            ) : (
+              <>Upload Document</>
+            )}
           </button>
         </div>
       </div>
@@ -678,73 +772,6 @@ export function NewDocumentModal({
           onClose={() => setIsNewDocTypeModalOpen(false)}
         />
       )}
-    </div>
-  );
-}
-
-interface NewEntityModalProps {
-  title: string;
-  fieldLabel: string;
-  fieldValue: string;
-  onFieldChange: (value: string) => void;
-  onSave: () => void;
-  onClose: () => void;
-}
-
-function NewEntityModal({
-  title,
-  fieldLabel,
-  fieldValue,
-  onFieldChange,
-  onSave,
-  onClose,
-}: NewEntityModalProps) {
-  return (
-    <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-[60]">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 flex flex-col">
-        <div className="p-4 border-b">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">{title}</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-        <div className="p-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {fieldLabel}
-          </label>
-          <input
-            type="text"
-            value={fieldValue}
-            onChange={(e) => onFieldChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder={`Enter ${fieldLabel.toLowerCase()}`}
-          />
-        </div>
-        <div className="p-4 border-t flex justify-end space-x-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onSave}
-            disabled={!fieldValue.trim()}
-            className={`px-4 py-2 rounded-md text-white ${
-              !fieldValue.trim()
-                ? "bg-blue-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            Add {fieldLabel.split(" ")[0]}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

@@ -285,6 +285,7 @@ export default function ProjectDetailPage() {
         allTags={allTags}
         correspondents={correspondents}
         documentTypes={documentTypes}
+        projectId={projectId} // Pass project ID for API association
       />
     </div>
   );

@@ -80,7 +80,7 @@ export default function Projects() {
       }
 
       const data = await response.json();
-      setProjects(data);
+      setProjects(data.results);
     } catch (error) {
       console.error("Failed to fetch projects:", error);
       alert("Failed to load projects. Please try again.");
@@ -175,8 +175,8 @@ export default function Projects() {
   // Filter projects based on search term
   const filteredProjects = projects.filter(
     (project) =>
-      project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchTerm.toLowerCase())
+      project?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project?.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (

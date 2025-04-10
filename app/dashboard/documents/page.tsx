@@ -54,7 +54,7 @@ export default function Documents() {
 
   // Add state for tags
   const [tags, setTags] = useState<Tag[]>([]);
-  
+
   // Add this interface for document type
   interface Document {
     id: number;
@@ -73,7 +73,7 @@ export default function Documents() {
   const fetchTags = async () => {
     try {
       const accessToken = Cookies.get("accessToken");
-      
+
       if (!accessToken) {
         throw new Error("Authentication token not found");
       }
@@ -156,7 +156,7 @@ export default function Documents() {
       }
 
       const data = await response.json();
-      setDocuments(data);
+      setDocuments(data.results);
     } catch (error) {
       console.error("Failed to fetch documents:", error);
       // Handle error - show error message to user
@@ -167,10 +167,10 @@ export default function Documents() {
   };
 
   // Extract all unique tags - update to use tag objects
-  const allTags = tags.map(tag => ({
+  const allTags = tags.map((tag) => ({
     id: tag.id,
     name: tag.name,
-    color: tag.color
+    color: tag.color,
   }));
 
   // Filter tags based on search term in the dropdown
@@ -182,7 +182,9 @@ export default function Documents() {
   const toggleTag = (tagId: number) => {
     const tagIdStr = tagId.toString();
     setSelectedTags((prev) =>
-      prev.includes(tagIdStr) ? prev.filter((t) => t !== tagIdStr) : [...prev, tagIdStr]
+      prev.includes(tagIdStr)
+        ? prev.filter((t) => t !== tagIdStr)
+        : [...prev, tagIdStr]
     );
   };
 
@@ -209,7 +211,7 @@ export default function Documents() {
 
     // Get filename without extension for title
     const fileName = selectedFile.name.split(".")[0];
-    const tagIds = [1, 2, 3];
+    const tagIds = [1];
     // Add required fields to the request
     formData.append("title", fileName);
     formData.append("document", selectedFile);
@@ -360,8 +362,8 @@ export default function Documents() {
                           htmlFor={`tag-${tag.id}`}
                           className="text-sm cursor-pointer flex items-center"
                         >
-                          <span 
-                            className="w-3 h-3 rounded-full mr-2" 
+                          <span
+                            className="w-3 h-3 rounded-full mr-2"
                             style={{ backgroundColor: tag.color }}
                           ></span>
                           {tag.name}
@@ -471,19 +473,26 @@ export default function Documents() {
             ))
         ) : documents.length > 0 ? (
           documents
-            .filter(doc => {
+            .filter((doc) => {
               // Filter by search term
-              const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase());
-              
+              const matchesSearch = doc.title
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase());
+
               // Filter by selected tags
-              const matchesTags = selectedTags.length === 0 || 
-                doc.tags.some(tagId => selectedTags.includes(tagId.toString()));
-              
+              const matchesTags =
+                selectedTags.length === 0 ||
+                doc.tags.some((tagId) =>
+                  selectedTags.includes(tagId.toString())
+                );
+
               // Filter by date range
-              const matchesDate = !dateRange?.from || !dateRange?.to || 
+              const matchesDate =
+                !dateRange?.from ||
+                !dateRange?.to ||
                 isWithinInterval(new Date(doc.created_date), {
                   start: dateRange.from,
-                  end: dateRange.to
+                  end: dateRange.to,
                 }) ||
                 isSameDay(new Date(doc.created_date), dateRange.from) ||
                 isSameDay(new Date(doc.created_date), dateRange.to);
@@ -491,127 +500,127 @@ export default function Documents() {
               return matchesSearch && matchesTags && matchesDate;
             })
             .map((doc) => (
-            <div
-              key={doc.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all group"
-            >
-              {/* Thumbnail with hover overlay */}
-              <div className="relative aspect-square bg-gray-100">
-                {doc.thumbnail ? (
-                  <>
-                    <img
-                      src={doc.thumbnail}
-                      alt={doc.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
-                  </>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <FileText className="w-16 h-16 text-gray-300" />
-                  </div>
-                )}
+              <div
+                key={doc.id}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all group"
+              >
+                {/* Thumbnail with hover overlay */}
+                <div className="relative aspect-square bg-gray-100">
+                  {doc.thumbnail ? (
+                    <>
+                      <img
+                        src={doc.thumbnail}
+                        alt={doc.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <FileText className="w-16 h-16 text-gray-300" />
+                    </div>
+                  )}
 
-                {/* Tags */}
-                <div className="absolute top-3 left-3 flex flex-wrap gap-1">
-                  {doc.tags.map((tagId, index) => {
-                    // Find the tag object that matches the ID
-                    const tag = tags.find(t => t.id === tagId);
-                    return (
-                      <span
-                        key={index}
-                        className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
-                        // style={{ backgroundColor: tag?.color || '#dbeafe', color: '#1e40af' }}
-                      >
-                        {tag ? tag.name : `Tag ${tagId}`}
-                      </span>
-                    );
-                  })}
+                  {/* Tags */}
+                  <div className="absolute top-3 left-3 flex flex-wrap gap-1">
+                    {doc.tags.map((tagId, index) => {
+                      // Find the tag object that matches the ID
+                      const tag = tags.find((t) => t.id === tagId);
+                      return (
+                        <span
+                          key={index}
+                          className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
+                          // style={{ backgroundColor: tag?.color || '#dbeafe', color: '#1e40af' }}
+                        >
+                          {tag ? tag.name : `Tag ${tagId}`}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  {/* Action menu */}
+                  <div className="absolute top-3 right-3">
+                    <button
+                      className="p-1.5 rounded-full bg-white bg-opacity-80 text-gray-500 hover:text-gray-700 hover:bg-opacity-100 relative"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveDropdown(
+                          activeDropdown === doc.id ? null : doc.id
+                        );
+                      }}
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+
+                    {activeDropdown === doc.id && (
+                      <div className="absolute right-0 top-8 w-36 bg-white rounded-md shadow-lg z-10 border border-gray-200 py-1">
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Handle edit action
+                            console.log("Edit document", doc.id);
+                          }}
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </button>
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Handle download action
+                            console.log("Download document", doc.id);
+                          }}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Action menu */}
-                <div className="absolute top-3 right-3">
-                  <button
-                    className="p-1.5 rounded-full bg-white bg-opacity-80 text-gray-500 hover:text-gray-700 hover:bg-opacity-100 relative"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveDropdown(
-                        activeDropdown === doc.id ? null : doc.id
-                      );
-                    }}
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
+                {/* Document Info */}
+                <div className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-gray-800 font-medium line-clamp-1">
+                        {doc.title}
+                      </h3>
+                      <p className="text-gray-500 text-sm mt-1">
+                        {doc.created_date}
+                      </p>
+                    </div>
+                    {/* Replace the download button with view button */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
+                        title="View"
+                        onClick={() => {
+                          // Handle view action
+                          console.log("View document", doc.id);
+                        }}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
 
-                  {activeDropdown === doc.id && (
-                    <div className="absolute right-0 top-8 w-36 bg-white rounded-md shadow-lg z-10 border border-gray-200 py-1">
-                      <button
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Handle edit action
-                          console.log("Edit document", doc.id);
-                        }}
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </button>
-                      <button
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Handle download action
-                          console.log("Download document", doc.id);
-                        }}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download
-                      </button>
+                  {/* Progress bar (optional) - show only if page_count is available */}
+                  {doc.page_count && (
+                    <div className="mt-3">
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div
+                          className="bg-blue-600 h-1.5 rounded-full"
+                          style={{ width: "75%" }} // Replace with actual progress
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
-
-              {/* Document Info */}
-              <div className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-gray-800 font-medium line-clamp-1">
-                      {doc.title}
-                    </h3>
-                    <p className="text-gray-500 text-sm mt-1">
-                      {doc.created_date}
-                    </p>
-                  </div>
-                  {/* Replace the download button with view button */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
-                      title="View"
-                      onClick={() => {
-                        // Handle view action
-                        console.log("View document", doc.id);
-                      }}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Progress bar (optional) - show only if page_count is available */}
-                {doc.page_count && (
-                  <div className="mt-3">
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
-                      <div
-                        className="bg-blue-600 h-1.5 rounded-full"
-                        style={{ width: "75%" }} // Replace with actual progress
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
+            ))
         ) : (
           <div className="col-span-full text-center py-10">
             <div className="flex flex-col items-center justify-center">
