@@ -257,14 +257,21 @@ export default function ProjectDetailPage() {
   const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
   const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
 
-  // Sample financial years
-  const financialYears = [
-    "AY - 2023-24",
-    "AY - 2024-25",
-    "AY - 2022-23",
-    "AY - 2021-22",
-    "AY - 2020-21",
-  ];
+  // Generate financial years from 1900 to current year
+  const generateFinancialYears = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+
+    // Start from current year and go back to 1900
+    for (let year = currentYear; year >= 1900; year--) {
+      years.push(`AY - ${year}-${(year + 1).toString().slice(-2)}`);
+    }
+
+    return years;
+  };
+
+  // Replace hardcoded financial years with dynamically generated ones
+  const financialYears = generateFinancialYears();
 
   // Helper function to process base64 string to data URL
   function getImageUrlFromBase64(
@@ -368,6 +375,7 @@ export default function ProjectDetailPage() {
         setSelectedDocumentType={setSelectedDocumentType}
         onNewDocument={() => setIsNewDocModalOpen(true)}
         allTags={tagOptions}
+        // financialYears={financialYears}
         financialYears={financialYears}
         documentTypes={documentTypeOptions}
       />

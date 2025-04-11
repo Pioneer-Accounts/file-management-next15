@@ -32,14 +32,21 @@ export function SearchFilterBar({
   financialYears,
   documentTypes,
 }: SearchFilterBarProps) {
+  // Add state for financial year search
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [isFinancialYearDropdownOpen, setIsFinancialYearDropdownOpen] = useState(false);
   const [isDocumentTypeDropdownOpen, setIsDocumentTypeDropdownOpen] = useState(false);
   const [filterTagSearchTerm, setFilterTagSearchTerm] = useState("");
+  const [financialYearSearchTerm, setFinancialYearSearchTerm] = useState("");
   
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   const financialYearDropdownRef = useRef<HTMLDivElement>(null);
   const documentTypeDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Filter financial years based on search term
+  const filteredFinancialYears = financialYears.filter((year) =>
+    year.toLowerCase().includes(financialYearSearchTerm.toLowerCase())
+  );
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -191,40 +198,59 @@ export function SearchFilterBar({
 
         {isFinancialYearDropdownOpen && (
           <div className="absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg">
-            <div className="max-h-60 overflow-y-auto">
-              {financialYears.map((year) => (
-                <div
-                  key={year}
-                  className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
-                    selectedFinancialYear === year ? "bg-blue-50" : ""
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedFinancialYear(
-                      year === selectedFinancialYear ? "" : year
-                    );
-                    setIsFinancialYearDropdownOpen(false);
-                  }}
-                >
-                  <span className="text-sm">{year}</span>
-                </div>
-              ))}
-            </div>
-
-            {selectedFinancialYear && (
-              <div className="border-t border-gray-200 mt-2 pt-2 flex justify-end px-2 pb-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedFinancialYear("");
-                    setIsFinancialYearDropdownOpen(false);
-                  }}
-                  className="text-xs text-blue-500 hover:text-blue-700"
-                >
-                  Clear
-                </button>
+            <div className="p-2">
+              <div className="relative mb-2">
+                <input
+                  type="text"
+                  placeholder="Search financial years"
+                  value={financialYearSearchTerm}
+                  onChange={(e) => setFinancialYearSearchTerm(e.target.value)}
+                  className="pl-3 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
               </div>
-            )}
+
+              <div className="max-h-60 overflow-y-auto">
+                {filteredFinancialYears.length > 0 ? (
+                  filteredFinancialYears.map((year) => (
+                    <div
+                      key={year}
+                      className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
+                        selectedFinancialYear === year ? "bg-blue-50" : ""
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedFinancialYear(
+                          year === selectedFinancialYear ? "" : year
+                        );
+                        setIsFinancialYearDropdownOpen(false);
+                      }}
+                    >
+                      <span className="text-sm">{year}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-2 text-sm text-gray-500">
+                    No financial years found
+                  </div>
+                )}
+              </div>
+
+              {selectedFinancialYear && (
+                <div className="border-t border-gray-200 mt-2 pt-2 flex justify-end px-2 pb-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedFinancialYear("");
+                      setFinancialYearSearchTerm("");
+                      setIsFinancialYearDropdownOpen(false);
+                    }}
+                    className="text-xs text-blue-500 hover:text-blue-700"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
