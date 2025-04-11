@@ -245,6 +245,9 @@ export default function ProjectDetailPage() {
     }
   }
 
+  // Convert tags from API to format needed for dropdown
+  const tagOptions = tags.map((tag) => tag.name);
+
   // Sample data for tags
   const allTags = [
     "Important",
@@ -292,9 +295,14 @@ export default function ProjectDetailPage() {
       searchTerm === "" ||
       doc.title.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Tag filter - we'd need to fetch tag names to match by name
-    // For now, we'll just assume they're empty
-    const matchesTags = selectedTags.length === 0;
+    // Tag filter - check if document has any of the selected tags
+    const matchesTags =
+      selectedTags.length === 0 ||
+      (doc.tags &&
+        doc.tags.some((tagId) => {
+          const tag = tags.find((t) => t.id === tagId);
+          return tag && selectedTags.includes(tag.name);
+        }));
 
     // Financial Year filter
     // We'll skip financial year filtering since API documents don't have this field directly
@@ -328,7 +336,7 @@ export default function ProjectDetailPage() {
         selectedDocumentType={selectedDocumentType}
         setSelectedDocumentType={setSelectedDocumentType}
         onNewDocument={() => setIsNewDocModalOpen(true)}
-        allTags={allTags}
+        allTags={tagOptions}
         financialYears={financialYears}
         documentTypes={documentTypes}
       />
