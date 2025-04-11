@@ -49,16 +49,26 @@ export default function Projects() {
   const menuRef = useRef<HTMLDivElement>(null);
   const financialYearDropdownRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  
+  // Generate financial years from 1900 to current year
+  const generateFinancialYears = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
 
-  // Sample financial years
-  const financialYears = [
-    "AY - 2023-24",
-    "AY - 2024-25",
-    "AY - 2022-23",
-    "AY - 2021-22",
-    "AY - 2020-21",
-    "AY - 2019-20",
-  ];
+    // Start from current year and go back to 1900
+    for (let year = currentYear; year >= 1900; year--) {
+      years.push(`AY - ${year}-${(year + 1).toString().slice(-2)}`);
+    }
+
+    return years;
+  };
+  const [financialYearSearchTerm, setFinancialYearSearchTerm] = useState("");
+  // Replace hardcoded financial years with dynamically generated ones
+  const financialYears = generateFinancialYears();
+  // Filter financial years based on search term
+  const filteredFinancialYears = financialYears.filter((year) =>
+    year.toLowerCase().includes(financialYearSearchTerm.toLowerCase())
+  );
 
   // Function to fetch projects from API
   const fetchProjects = async (dateFilters?: {
@@ -271,18 +281,50 @@ export default function Projects() {
 
             {isFinancialYearDropdownOpen && (
               <div className="absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg">
+                <div className="p-2 border-b border-gray-200">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search years..."
+                      className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      value={financialYearSearchTerm}
+                      onChange={(e) =>
+                        setFinancialYearSearchTerm(e.target.value)
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    {financialYearSearchTerm && (
+                      <button
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFinancialYearSearchTerm("");
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div className="max-h-60 overflow-y-auto">
-                  {financialYears.map((year) => (
-                    <div
-                      key={year}
-                      className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
-                        selectedFinancialYear === year ? "bg-blue-50" : ""
-                      }`}
-                      onClick={() => handleFinancialYearSelect(year)}
-                    >
-                      <span className="text-sm">{year}</span>
+                  {filteredFinancialYears.length > 0 ? (
+                    filteredFinancialYears.map((year) => (
+                      <div
+                        key={year}
+                        className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
+                          selectedFinancialYear === year ? "bg-blue-50" : ""
+                        }`}
+                        onClick={() => handleFinancialYearSelect(year)}
+                      >
+                        <span className="text-sm">{year}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-2 text-sm text-gray-500 text-center">
+                      No matching years found
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 {selectedFinancialYear && (
