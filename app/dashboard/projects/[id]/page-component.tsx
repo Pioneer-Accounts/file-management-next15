@@ -46,10 +46,16 @@ interface Document {
   thumbnail_str?: string; // Base64 encoded thumbnail string
 }
 
+// Define interfaces
 interface Tag {
   id: number;
   name: string;
   color: string;
+}
+
+interface DocumentType {
+  id: number;
+  name: string;
 }
 
 export default function ProjectDetailPage() {
@@ -83,6 +89,7 @@ export default function ProjectDetailPage() {
     fetchProject();
     fetchDocuments();
     fetchTags();
+    fetchDocumentTypes();
   }, [projectId]);
 
   // Function to fetch project data from API
@@ -214,6 +221,34 @@ export default function ProjectDetailPage() {
     }
   };
 
+  // Function to fetch document types from API
+  const fetchDocumentTypes = async () => {
+    try {
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch("http://localhost:8000/document-type/", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setDocumentTypes(data);
+    } catch (error) {
+      console.error("Failed to fetch document types:", error);
+    }
+  };
+
   // States for filtering and searching
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -278,15 +313,11 @@ export default function ProjectDetailPage() {
   ];
 
   // Sample document types
-  const documentTypes = [
-    "Invoice",
-    "Contract",
-    "Report",
-    "Proposal",
-    "Receipt",
-    "Letter",
-    "Memo",
-  ];
+  // State for document types
+  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+
+  // Convert document types from API to format needed for dropdown
+  const documentTypeOptions = documentTypes.map((type) => type.name);
 
   // Filter documents based on search term and selected filters
   const filteredDocuments = documents.filter((doc) => {
@@ -338,7 +369,7 @@ export default function ProjectDetailPage() {
         onNewDocument={() => setIsNewDocModalOpen(true)}
         allTags={tagOptions}
         financialYears={financialYears}
-        documentTypes={documentTypes}
+        documentTypes={documentTypeOptions}
       />
 
       {/* Project Documents Grid */}
@@ -509,7 +540,7 @@ export default function ProjectDetailPage() {
         onClose={() => setIsNewDocModalOpen(false)}
         allTags={allTags}
         correspondents={correspondents}
-        documentTypes={documentTypes}
+        documentTypes={documentTypeOptions}
         projectId={projectId} // Pass project ID for API association
       />
     </div>
