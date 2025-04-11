@@ -185,8 +185,31 @@ export default function ProjectDetailPage() {
         url += `&search=${encodeURIComponent(searchTerm.trim())}`;
       }
       
-      // Add other filter parameters if implemented
-      // Example: if (selectedTags.length > 0) { url += `&tags=${selectedTags.join(',')}` }
+      // Add tag filtering if implemented
+      if (selectedTags.length > 0) {
+        url += `&tags=${encodeURIComponent(selectedTags.join(','))}`;
+      }
+
+      // Add financial year filtering if selected
+      if (selectedFinancialYear) {
+        // Parse financial year in format "AY - 2023-24"
+        const match = selectedFinancialYear.match(/AY - (\d{4})-(\d{2})/);
+        if (match) {
+          const startYear = parseInt(match[1]);
+          const endYear = parseInt(`20${match[2]}`); // Convert "24" to 2024
+          
+          // In India, financial year starts from April 1st and ends on March 31st
+          const startDate = `${startYear}-04-01`;
+          const endDate = `${endYear}-03-31`;
+          
+          url += `&created_min=${encodeURIComponent(startDate)}&created_max=${encodeURIComponent(endDate)}`;
+        }
+      }
+
+      // Add document type filtering if implemented
+      if (selectedDocumentType) {
+        url += `&document_type=${encodeURIComponent(selectedDocumentType)}`;
+      }
 
       const response = await fetch(url, {
         method: "GET",
@@ -202,7 +225,7 @@ export default function ProjectDetailPage() {
 
       const data = await response.json();
       setDocuments(data.results);
-      console.log("Fetched documents with search:", url, data.results);
+      console.log("Fetched documents with filters:", url, data.results);
     } catch (error) {
       console.error("Failed to fetch documents:", error);
       // Handle error - show error message to user
