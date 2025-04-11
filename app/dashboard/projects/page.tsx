@@ -57,10 +57,14 @@ export default function Projects() {
     "AY - 2022-23",
     "AY - 2021-22",
     "AY - 2020-21",
+    "AY - 2019-20",
   ];
 
   // Function to fetch projects from API
-  const fetchProjects = async () => {
+  const fetchProjects = async (dateFilters?: {
+    min?: string;
+    max?: string;
+  }) => {
     setIsLoading(true);
     try {
       const accessToken = Cookies.get("accessToken");
@@ -69,7 +73,18 @@ export default function Projects() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch("http://localhost:8000/projects/", {
+      // Build URL with query parameters for date filtering
+      let url = "http://localhost:8000/projects/";
+      if (dateFilters) {
+        const params = new URLSearchParams();
+        if (dateFilters.min) params.append("start_date_min", dateFilters.min);
+        if (dateFilters.max) params.append("start_date_max", dateFilters.max);
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
+      }
+
+      const response = await fetch(url, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -95,6 +110,39 @@ export default function Projects() {
   useEffect(() => {
     fetchProjects();
   }, []);
+
+  // Convert financial year to date range
+  const getDateRangeFromFinancialYear = (financialYear: string) => {
+    // Extract the year from format "AY - YYYY-YY"
+    const match = financialYear.match(/AY - (\d{4})-\d{2}/);
+    if (!match) return null;
+
+    const startYear = parseInt(match[1]);
+
+    // Financial year typically runs from April 1 to March 31
+    return {
+      min: `${startYear}-04-01`,
+      max: `${startYear + 1}-03-31`,
+    };
+  };
+
+  // Handle financial year selection
+  const handleFinancialYearSelect = (year: string) => {
+    if (year === selectedFinancialYear) {
+      // Clear selection
+      setSelectedFinancialYear("");
+      fetchProjects(); // Reset to fetch all projects
+    } else {
+      setSelectedFinancialYear(year);
+
+      // Get date range from financial year
+      const dateRange = getDateRangeFromFinancialYear(year);
+      if (dateRange) {
+        fetchProjects(dateRange);
+      }
+    }
+    setIsFinancialYearDropdownOpen(false);
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -230,12 +278,7 @@ export default function Projects() {
                       className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
                         selectedFinancialYear === year ? "bg-blue-50" : ""
                       }`}
-                      onClick={() => {
-                        setSelectedFinancialYear(
-                          year === selectedFinancialYear ? "" : year
-                        );
-                        setIsFinancialYearDropdownOpen(false);
-                      }}
+                      onClick={() => handleFinancialYearSelect(year)}
                     >
                       <span className="text-sm">{year}</span>
                     </div>
@@ -249,6 +292,7 @@ export default function Projects() {
                         e.stopPropagation();
                         setSelectedFinancialYear("");
                         setIsFinancialYearDropdownOpen(false);
+                        fetchProjects(); // Reset to fetch all projects
                       }}
                       className="text-xs text-blue-500 hover:text-blue-700"
                     >
