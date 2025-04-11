@@ -15,6 +15,7 @@ import {
   Trash2,
   ChevronDown,
   X,
+  CalendarIcon,
 } from "lucide-react";
 import Link from "next/link";
 import Cookies from "js-cookie";
@@ -29,6 +30,7 @@ export default function Projects() {
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
   const [newJobName, setNewJobName] = useState("");
   const [newJobDescription, setNewJobDescription] = useState("");
+  const [projectStartDate, setProjectStartDate] = useState<Date | null>(null);
 
   // Define Project interface based on API response
   interface Project {
@@ -139,7 +141,9 @@ export default function Projects() {
         title: newJobName,
         description: newJobDescription,
         status: "unknown",
-        start_date: null,
+        start_date: projectStartDate
+          ? projectStartDate.toISOString().split("T")[0]
+          : null,
       };
 
       // Make API call to create project
@@ -162,6 +166,7 @@ export default function Projects() {
       // Reset form and close modal
       setNewJobName("");
       setNewJobDescription("");
+      setProjectStartDate(null);
       setIsNewJobModalOpen(false);
 
       // Refresh projects list
@@ -300,6 +305,37 @@ export default function Projects() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter job name"
                 />
+              </div>
+
+              {/* Project Creation Date */}
+              <div>
+                <label
+                  htmlFor="projectCreationDate"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Project Creation Date
+                </label>
+                <div className="relative">
+                  <input
+                    id="projectCreationDate"
+                    type="date"
+                    value={
+                      projectStartDate
+                        ? projectStartDate.toISOString().split("T")[0]
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const date = e.target.value
+                        ? new Date(e.target.value)
+                        : null;
+                      setProjectStartDate(date);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <CalendarIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
               </div>
 
               <div>
