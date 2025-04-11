@@ -80,9 +80,13 @@ export default function ProjectDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // State for search term, documents, and tags
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
+  const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
 
   // Fetch project data from API
   useEffect(() => {
@@ -91,6 +95,11 @@ export default function ProjectDetailPage() {
     fetchTags();
     fetchDocumentTypes();
   }, [projectId]);
+
+  // Fetch documents when search term changes
+  useEffect(() => {
+    fetchDocuments();
+  }, [searchTerm, selectedTags, selectedFinancialYear, selectedDocumentType]);
 
   // Function to fetch project data from API
   async function fetchProject() {
@@ -168,16 +177,24 @@ export default function ProjectDetailPage() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch(
-        `http://localhost:8000/documents/?project=${projectId}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // Build URL with query parameters
+      let url = `http://localhost:8000/documents/?project=${projectId}`;
+      
+      // Add search parameter if search term exists
+      if (searchTerm.trim()) {
+        url += `&search=${encodeURIComponent(searchTerm.trim())}`;
+      }
+      
+      // Add other filter parameters if implemented
+      // Example: if (selectedTags.length > 0) { url += `&tags=${selectedTags.join(',')}` }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
@@ -185,6 +202,7 @@ export default function ProjectDetailPage() {
 
       const data = await response.json();
       setDocuments(data.results);
+      console.log("Fetched documents with search:", url, data.results);
     } catch (error) {
       console.error("Failed to fetch documents:", error);
       // Handle error - show error message to user
@@ -249,12 +267,7 @@ export default function ProjectDetailPage() {
     }
   };
 
-  // States for filtering and searching
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedFinancialYear, setSelectedFinancialYear] =
-    useState<string>("");
-  const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
+  // State for new document modal
   const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
 
   // Generate financial years from 1900 to current year
@@ -375,7 +388,6 @@ export default function ProjectDetailPage() {
         setSelectedDocumentType={setSelectedDocumentType}
         onNewDocument={() => setIsNewDocModalOpen(true)}
         allTags={tagOptions}
-        // financialYears={financialYears}
         financialYears={financialYears}
         documentTypes={documentTypeOptions}
       />
