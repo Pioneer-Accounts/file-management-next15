@@ -49,7 +49,7 @@ export default function Projects() {
   const menuRef = useRef<HTMLDivElement>(null);
   const financialYearDropdownRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
-  
+
   // Generate financial years from 1900 to current year
   const generateFinancialYears = () => {
     const currentYear = new Date().getFullYear();
@@ -71,9 +71,10 @@ export default function Projects() {
   );
 
   // Function to fetch projects from API
-  const fetchProjects = async (dateFilters?: {
+  const fetchProjects = async (filters?: {
     min?: string;
     max?: string;
+    search?: string;
   }) => {
     setIsLoading(true);
     try {
@@ -83,12 +84,13 @@ export default function Projects() {
         throw new Error("Authentication token not found");
       }
 
-      // Build URL with query parameters for date filtering
+      // Build URL with query parameters for filtering
       let url = "http://localhost:8000/projects/";
-      if (dateFilters) {
+      if (filters) {
         const params = new URLSearchParams();
-        if (dateFilters.min) params.append("start_date_min", dateFilters.min);
-        if (dateFilters.max) params.append("start_date_max", dateFilters.max);
+        if (filters.min) params.append("start_date_min", filters.min);
+        if (filters.max) params.append("start_date_max", filters.max);
+        if (filters.search) params.append("search", filters.search);
         if (params.toString()) {
           url += `?${params.toString()}`;
         }
@@ -141,14 +143,31 @@ export default function Projects() {
     if (year === selectedFinancialYear) {
       // Clear selection
       setSelectedFinancialYear("");
-      fetchProjects(); // Reset to fetch all projects
+      // If there's a search term, maintain that filter
+      if (searchTerm) {
+        fetchProjects({ search: searchTerm });
+      } else {
+        fetchProjects(); // Reset to fetch all projects
+      }
     } else {
       setSelectedFinancialYear(year);
 
       // Get date range from financial year
       const dateRange = getDateRangeFromFinancialYear(year);
       if (dateRange) {
-        fetchProjects(dateRange);
+        // Include search term if present
+        if (searchTerm) {
+          fetchProjects({
+            min: dateRange.min,
+            max: dateRange.max,
+            search: searchTerm,
+          });
+        } else {
+          fetchProjects({
+            min: dateRange.min,
+            max: dateRange.max,
+          });
+        }
       }
     }
     setIsFinancialYearDropdownOpen(false);
@@ -179,6 +198,44 @@ export default function Projects() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isNewJobModalOpen]);
+
+  // Handle search input changes with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm) {
+        // If there's a selected financial year, maintain that filter
+        if (selectedFinancialYear) {
+          const dateRange = getDateRangeFromFinancialYear(
+            selectedFinancialYear
+          );
+          if (dateRange) {
+            fetchProjects({
+              min: dateRange.min,
+              max: dateRange.max,
+              search: searchTerm,
+            });
+          }
+        } else {
+          // Just search without date filters
+          fetchProjects({ search: searchTerm });
+        }
+      } else if (selectedFinancialYear) {
+        // If search is cleared but financial year is selected
+        const dateRange = getDateRangeFromFinancialYear(selectedFinancialYear);
+        if (dateRange) {
+          fetchProjects({
+            min: dateRange.min,
+            max: dateRange.max,
+          });
+        }
+      } else {
+        // No filters, fetch all projects
+        fetchProjects();
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Handle job creation
   const handleCreateJob = async () => {
@@ -334,7 +391,12 @@ export default function Projects() {
                         e.stopPropagation();
                         setSelectedFinancialYear("");
                         setIsFinancialYearDropdownOpen(false);
-                        fetchProjects(); // Reset to fetch all projects
+                        // Maintain search term if present
+                        if (searchTerm) {
+                          fetchProjects({ search: searchTerm });
+                        } else {
+                          fetchProjects(); // Reset to fetch all projects
+                        }
                       }}
                       className="text-xs text-blue-500 hover:text-blue-700"
                     >
