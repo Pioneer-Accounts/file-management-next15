@@ -208,7 +208,11 @@ export default function ProjectDetailPage() {
 
       // Add document type filtering if implemented
       if (selectedDocumentType) {
-        url += `&document_type=${encodeURIComponent(selectedDocumentType)}`;
+        // Find the document type ID that matches the selected name
+        const documentType = documentTypes.find(type => type.name === selectedDocumentType);
+        if (documentType) {
+          url += `&document_type=${encodeURIComponent(documentType.id.toString())}`;
+        }
       }
 
       const response = await fetch(url, {
@@ -355,12 +359,14 @@ export default function ProjectDetailPage() {
     { id: "5", name: "Michael Brown" },
   ];
 
-  // Sample document types
   // State for document types
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
 
-  // Convert document types from API to format needed for dropdown
-  const documentTypeOptions = documentTypes.map((type) => type.name);
+  // Convert document types from API to format needed for dropdown - include both name and id
+  const documentTypeOptions = documentTypes.map((type) => ({
+    id: type.id.toString(),
+    name: type.name
+  }));
 
   // Filter documents based on search term and selected filters
   const filteredDocuments = documents.filter((doc) => {
@@ -382,9 +388,9 @@ export default function ProjectDetailPage() {
     // We'll skip financial year filtering since API documents don't have this field directly
     const matchesFinancialYear = !selectedFinancialYear || true;
 
-    // Document Type filter
-    // We'll skip document type filtering since API documents don't have this field directly
-    const matchesDocumentType = !selectedDocumentType || true;
+    // Document Type filter is handled by the API
+    // Local filtering is not needed as the API returns the filtered results
+    const matchesDocumentType = true;
 
     return (
       matchesSearch &&
@@ -412,7 +418,7 @@ export default function ProjectDetailPage() {
         onNewDocument={() => setIsNewDocModalOpen(true)}
         allTags={tagOptions}
         financialYears={financialYears}
-        documentTypes={documentTypeOptions}
+        documentTypes={documentTypeOptions.map(type => type.name)}
       />
 
       {/* Project Documents Grid */}
@@ -583,7 +589,7 @@ export default function ProjectDetailPage() {
         onClose={() => setIsNewDocModalOpen(false)}
         allTags={allTags}
         correspondents={correspondents}
-        documentTypes={documentTypeOptions}
+        documentTypes={documentTypeOptions.map(type => type.name)}
         projectId={projectId} // Pass project ID for API association
       />
     </div>
