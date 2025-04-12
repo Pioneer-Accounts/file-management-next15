@@ -111,7 +111,7 @@ export default function ProjectDetailPage() {
       }
 
       const response = await fetch(
-        `http://localhost:8000/projects/${projectId}/`,
+        `${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/`,
         {
           method: "GET",
           headers: {
@@ -178,7 +178,7 @@ export default function ProjectDetailPage() {
       }
 
       // Build URL with query parameters
-      let url = `http://localhost:8000/documents/?project=${projectId}`;
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/documents/?project=${projectId}`;
       
       // Add search parameter if search term exists
       if (searchTerm.trim()) {
@@ -247,7 +247,7 @@ export default function ProjectDetailPage() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch("http://localhost:8000/tags", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tags`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -275,7 +275,7 @@ export default function ProjectDetailPage() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch("http://localhost:8000/document-type/", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/document-type/`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${accessToken}`,

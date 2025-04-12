@@ -85,7 +85,7 @@ export default function Projects() {
       }
 
       // Build URL with query parameters for filtering
-      let url = "http://localhost:8000/projects/";
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/projects/`;
       if (filters) {
         const params = new URLSearchParams();
         if (filters.min) params.append("start_date_min", filters.min);
@@ -262,7 +262,7 @@ export default function Projects() {
       };
 
       // Make API call to create project
-      const response = await fetch("http://localhost:8000/projects/", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,

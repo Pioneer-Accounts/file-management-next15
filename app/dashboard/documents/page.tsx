@@ -28,7 +28,9 @@ import { MoreVertical } from "lucide-react";
 import Cookies from "js-cookie";
 
 // Helper function to process base64 string to data URL
-function getImageUrlFromBase64(base64String: string | undefined): string | null {
+function getImageUrlFromBase64(
+  base64String: string | undefined
+): string | null {
   if (!base64String) return null;
   try {
     // Try to determine the type of image from the base64 data
@@ -36,7 +38,7 @@ function getImageUrlFromBase64(base64String: string | undefined): string | null 
     // we'll use a generic image type that browsers can usually auto-detect
     return `data:image/*;base64,${base64String}`;
   } catch (e) {
-    console.error('Error processing base64 image:', e);
+    console.error("Error processing base64 image:", e);
     return null;
   }
 }
@@ -48,11 +50,14 @@ export default function Documents() {
   // Define our date range state to match the structure from react-day-picker
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
-  const [isFinancialYearDropdownOpen, setIsFinancialYearDropdownOpen] = useState(false);
-  const [isDocumentTypeDropdownOpen, setIsDocumentTypeDropdownOpen] = useState(false);
+  const [isFinancialYearDropdownOpen, setIsFinancialYearDropdownOpen] =
+    useState(false);
+  const [isDocumentTypeDropdownOpen, setIsDocumentTypeDropdownOpen] =
+    useState(false);
   const [tagSearchTerm, setTagSearchTerm] = useState("");
   const [financialYearSearchTerm, setFinancialYearSearchTerm] = useState("");
-  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
+  const [selectedFinancialYear, setSelectedFinancialYear] =
+    useState<string>("");
   const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   const financialYearDropdownRef = useRef<HTMLDivElement>(null);
@@ -109,7 +114,7 @@ export default function Documents() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch("http://localhost:8000/tags", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tags`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -137,13 +142,16 @@ export default function Documents() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch("http://localhost:8000/document-type/", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/document-type/`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
@@ -154,7 +162,7 @@ export default function Documents() {
       console.error("Failed to fetch document types:", error);
     }
   };
-  
+
   // Helper function to determine financial year from date
   function getFinancialYearFromDate(date: Date): string {
     const month = date.getMonth();
@@ -169,7 +177,7 @@ export default function Documents() {
       return `AY - ${year}-${(year + 1).toString().slice(-2)}`;
     }
   }
-  
+
   // Generate financial years from 1900 to current year
   const generateFinancialYears = () => {
     const currentYear = new Date().getFullYear();
@@ -182,7 +190,7 @@ export default function Documents() {
 
     return years;
   };
-  
+
   const financialYears = generateFinancialYears();
 
   // Close dropdown when clicking outside
@@ -194,14 +202,14 @@ export default function Documents() {
       ) {
         setIsTagDropdownOpen(false);
       }
-      
+
       if (
         financialYearDropdownRef.current &&
         !financialYearDropdownRef.current.contains(event.target as Node)
       ) {
         setIsFinancialYearDropdownOpen(false);
       }
-      
+
       if (
         documentTypeDropdownRef.current &&
         !documentTypeDropdownRef.current.contains(event.target as Node)
@@ -252,17 +260,17 @@ export default function Documents() {
       }
 
       // Build URL with query parameters
-      let url = "http://localhost:8000/documents/";
-      
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/documents/`;
+
       // Add search parameter if search term exists
       if (searchTerm.trim()) {
         url += `?search=${encodeURIComponent(searchTerm.trim())}`;
       }
-      
+
       // Add tag filtering if implemented
       if (selectedTags.length > 0) {
-        const prefix = url.includes('?') ? '&' : '?';
-        url += `${prefix}tags=${encodeURIComponent(selectedTags.join(','))}`;
+        const prefix = url.includes("?") ? "&" : "?";
+        url += `${prefix}tags=${encodeURIComponent(selectedTags.join(","))}`;
       }
 
       // Add financial year filtering if selected
@@ -272,23 +280,29 @@ export default function Documents() {
         if (match) {
           const startYear = parseInt(match[1]);
           const endYear = parseInt(`20${match[2]}`); // Convert "24" to 2024
-          
+
           // In India, financial year starts from April 1st and ends on March 31st
           const startDate = `${startYear}-04-01`;
           const endDate = `${endYear}-03-31`;
-          
-          const prefix = url.includes('?') ? '&' : '?';
-          url += `${prefix}created_min=${encodeURIComponent(startDate)}&created_max=${encodeURIComponent(endDate)}`;
+
+          const prefix = url.includes("?") ? "&" : "?";
+          url += `${prefix}created_min=${encodeURIComponent(
+            startDate
+          )}&created_max=${encodeURIComponent(endDate)}`;
         }
       }
 
       // Add document type filtering if implemented
       if (selectedDocumentType) {
         // Find the document type ID that matches the selected name
-        const documentType = documentTypes.find(type => type.name === selectedDocumentType);
+        const documentType = documentTypes.find(
+          (type) => type.name === selectedDocumentType
+        );
         if (documentType) {
-          const prefix = url.includes('?') ? '&' : '?';
-          url += `${prefix}document_type=${encodeURIComponent(documentType.id.toString())}`;
+          const prefix = url.includes("?") ? "&" : "?";
+          url += `${prefix}document_type=${encodeURIComponent(
+            documentType.id.toString()
+          )}`;
         }
       }
 
@@ -392,7 +406,7 @@ export default function Documents() {
       }
 
       // Make API call
-      const response = await fetch("http://localhost:8000/documents/", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -569,11 +583,13 @@ export default function Documents() {
             )}
           </PopoverContent>
         </Popover>
-        
+
         {/* Financial Year Dropdown */}
         <div className="relative" ref={financialYearDropdownRef}>
           <button
-            onClick={() => setIsFinancialYearDropdownOpen(!isFinancialYearDropdownOpen)}
+            onClick={() =>
+              setIsFinancialYearDropdownOpen(!isFinancialYearDropdownOpen)
+            }
             className="flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white min-w-[180px] focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <span className="text-sm truncate">
@@ -598,21 +614,26 @@ export default function Documents() {
                 <div className="max-h-60 overflow-y-auto">
                   {financialYears
                     .filter((year) =>
-                      year.toLowerCase().includes(financialYearSearchTerm.toLowerCase())
+                      year
+                        .toLowerCase()
+                        .includes(financialYearSearchTerm.toLowerCase())
                     )
                     .map((year) => (
                       <div
                         key={year}
-                        className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${selectedFinancialYear === year ? "bg-blue-50" : ""}`}
+                        className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
+                          selectedFinancialYear === year ? "bg-blue-50" : ""
+                        }`}
                         onClick={() => {
-                          setSelectedFinancialYear(year === selectedFinancialYear ? "" : year);
+                          setSelectedFinancialYear(
+                            year === selectedFinancialYear ? "" : year
+                          );
                           setIsFinancialYearDropdownOpen(false);
                         }}
                       >
                         <span className="text-sm">{year}</span>
                       </div>
-                    ))
-                  }
+                    ))}
                 </div>
 
                 {selectedFinancialYear && (
@@ -633,11 +654,13 @@ export default function Documents() {
             </div>
           )}
         </div>
-        
+
         {/* Document Type Dropdown */}
         <div className="relative" ref={documentTypeDropdownRef}>
           <button
-            onClick={() => setIsDocumentTypeDropdownOpen(!isDocumentTypeDropdownOpen)}
+            onClick={() =>
+              setIsDocumentTypeDropdownOpen(!isDocumentTypeDropdownOpen)
+            }
             className="flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white min-w-[180px] focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <span className="text-sm truncate">
@@ -652,9 +675,13 @@ export default function Documents() {
                 {documentTypes.map((type) => (
                   <div
                     key={type.id}
-                    className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${selectedDocumentType === type.name ? "bg-blue-50" : ""}`}
+                    className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
+                      selectedDocumentType === type.name ? "bg-blue-50" : ""
+                    }`}
                     onClick={() => {
-                      setSelectedDocumentType(type.name === selectedDocumentType ? "" : type.name);
+                      setSelectedDocumentType(
+                        type.name === selectedDocumentType ? "" : type.name
+                      );
                       setIsDocumentTypeDropdownOpen(false);
                     }}
                   >
@@ -736,25 +763,30 @@ export default function Documents() {
                     <>
                       <div className="relative w-full h-full">
                         <img
-                          src={getImageUrlFromBase64(doc.thumbnail_str) || ''}
+                          src={getImageUrlFromBase64(doc.thumbnail_str) || ""}
                           alt={doc.title}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            console.log('Image failed to load for document:', doc.id);
+                            console.log(
+                              "Image failed to load for document:",
+                              doc.id
+                            );
                             // Try direct display of the fallback instead of DOM manipulation
                             const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
+                            target.style.display = "none";
                             // Get the fallback element by id
-                            const fallbackEl = document.getElementById(`fallback-${doc.id}`);
+                            const fallbackEl = document.getElementById(
+                              `fallback-${doc.id}`
+                            );
                             if (fallbackEl) {
-                              fallbackEl.style.display = 'flex';
+                              fallbackEl.style.display = "flex";
                             }
                           }}
                         />
-                        <div 
-                          id={`fallback-${doc.id}`} 
-                          className="absolute inset-0 w-full h-full items-center justify-center" 
-                          style={{ display: 'none' }}
+                        <div
+                          id={`fallback-${doc.id}`}
+                          className="absolute inset-0 w-full h-full items-center justify-center"
+                          style={{ display: "none" }}
                         >
                           <FileText className="w-16 h-16 text-gray-300" />
                         </div>

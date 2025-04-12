@@ -130,7 +130,7 @@ export function NewDocumentModal({
       console.log("Making API request to fetch tags...");
 
       // Direct URL from the curl example
-      const response = await fetch("http://localhost:8000/tags", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tags`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${hardcodedToken}`,
@@ -196,13 +196,16 @@ export function NewDocumentModal({
 
       console.log("Making API request to fetch document types...");
 
-      const response = await fetch("http://localhost:8000/document-type/", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/document-type/`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       console.log("API Response status:", response.status);
 
@@ -306,14 +309,17 @@ export function NewDocumentModal({
       console.log("Uploading document with FormData");
 
       // Send the request to the API with FormData (multipart/form-data)
-      const response = await fetch("http://localhost:8000/documents/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          // Don't set Content-Type manually - the browser will set it with the correct boundary
-        },
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/documents/`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            // Don't set Content-Type manually - the browser will set it with the correct boundary
+          },
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -333,17 +339,20 @@ export function NewDocumentModal({
       if (responseData && responseData.id && notes) {
         try {
           // Call the notes API to save notes for this document
-          const notesResponse = await fetch("http://localhost:8000/notes/", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              note: notes,
-              document: responseData.id,
-            }),
-          });
+          const notesResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/notes/`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                note: notes,
+                document: responseData.id,
+              }),
+            }
+          );
 
           if (!notesResponse.ok) {
             const errorText = await notesResponse.text();
