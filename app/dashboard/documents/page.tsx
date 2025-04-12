@@ -261,16 +261,18 @@ export default function Documents() {
 
       // Build URL with query parameters
       let url = `${process.env.NEXT_PUBLIC_API_URL}/documents/`;
-
+      const queryParams = new URLSearchParams();
       // Add search parameter if search term exists
       if (searchTerm.trim()) {
-        url += `?search=${encodeURIComponent(searchTerm.trim())}`;
+        queryParams.append("search", searchTerm.trim());
       }
 
-      // Add tag filtering if implemented
+      // Add tag filtering - updated to handle multiple tag parameters
       if (selectedTags.length > 0) {
-        const prefix = url.includes("?") ? "&" : "?";
-        url += `${prefix}tags=${encodeURIComponent(selectedTags.join(","))}`;
+        // Instead of joining with commas, add each tag as a separate parameter
+        selectedTags.forEach((tagId) => {
+          queryParams.append("tags", tagId);
+        });
       }
 
       // Add financial year filtering if selected
@@ -285,10 +287,8 @@ export default function Documents() {
           const startDate = `${startYear}-04-01`;
           const endDate = `${endYear}-03-31`;
 
-          const prefix = url.includes("?") ? "&" : "?";
-          url += `${prefix}created_min=${encodeURIComponent(
-            startDate
-          )}&created_max=${encodeURIComponent(endDate)}`;
+          queryParams.append("created_min", startDate);
+          queryParams.append("created_max", endDate);
         }
       }
 
@@ -299,11 +299,14 @@ export default function Documents() {
           (type) => type.name === selectedDocumentType
         );
         if (documentType) {
-          const prefix = url.includes("?") ? "&" : "?";
-          url += `${prefix}document_type=${encodeURIComponent(
-            documentType.id.toString()
-          )}`;
+          queryParams.append("document_type", documentType.id.toString());
         }
+      }
+
+      // Append query parameters to URL if there are any
+      const queryString = queryParams.toString();
+      if (queryString) {
+        url += `?${queryString}`;
       }
 
       const response = await fetch(url, {
@@ -406,14 +409,17 @@ export default function Documents() {
       }
 
       // Make API call
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          // Note: Don't set Content-Type when using FormData, browser will set it with boundary
-        },
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/documents/`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            // Note: Don't set Content-Type when using FormData, browser will set it with boundary
+          },
+          body: formData,
+        }
+      );
 
       clearInterval(interval);
 

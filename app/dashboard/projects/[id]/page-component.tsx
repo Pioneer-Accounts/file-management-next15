@@ -177,17 +177,23 @@ export default function ProjectDetailPage() {
         throw new Error("Authentication token not found");
       }
 
-      // Build URL with query parameters
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/documents/?project=${projectId}`;
+      // Build URL with query parameters using URLSearchParams
+      const queryParams = new URLSearchParams();
+      
+      // Add project ID
+      queryParams.append("project", projectId);
       
       // Add search parameter if search term exists
       if (searchTerm.trim()) {
-        url += `&search=${encodeURIComponent(searchTerm.trim())}`;
+        queryParams.append("search", searchTerm.trim());
       }
       
-      // Add tag filtering if implemented
+      // Add tag filtering - updated to handle multiple tag parameters
       if (selectedTags.length > 0) {
-        url += `&tags=${encodeURIComponent(selectedTags.join(','))}`;
+        // Instead of joining with commas, add each tag as a separate parameter
+        selectedTags.forEach(tagId => {
+          queryParams.append("tags", tagId);
+        });
       }
 
       // Add financial year filtering if selected
@@ -202,7 +208,8 @@ export default function ProjectDetailPage() {
           const startDate = `${startYear}-04-01`;
           const endDate = `${endYear}-03-31`;
           
-          url += `&created_min=${encodeURIComponent(startDate)}&created_max=${encodeURIComponent(endDate)}`;
+          queryParams.append("created_min", startDate);
+          queryParams.append("created_max", endDate);
         }
       }
 
@@ -211,9 +218,12 @@ export default function ProjectDetailPage() {
         // Find the document type ID that matches the selected name
         const documentType = documentTypes.find(type => type.name === selectedDocumentType);
         if (documentType) {
-          url += `&document_type=${encodeURIComponent(documentType.id.toString())}`;
+          queryParams.append("document_type", documentType.id.toString());
         }
       }
+
+      // Construct the final URL
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/documents/?${queryParams.toString()}`;
 
       const response = await fetch(url, {
         method: "GET",
