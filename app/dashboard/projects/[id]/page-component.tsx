@@ -84,6 +84,7 @@ export default function ProjectDetailPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
+  // Store tag IDs as strings in selectedTags
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
   const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
@@ -299,6 +300,8 @@ export default function ProjectDetailPage() {
 
       const data = await response.json();
       setDocumentTypes(data);
+      // Extract document type names for the SearchFilterBar
+      setDocumentTypeNames(data.map((type: DocumentType) => type.name));
     } catch (error) {
       console.error("Failed to fetch document types:", error);
     }
@@ -337,28 +340,8 @@ export default function ProjectDetailPage() {
     }
   }
 
-  // Convert tags from API to format needed for dropdown
-  const tagOptions = tags.map((tag) => tag.name);
-
-  // Sample data for tags
-  const allTags = [
-    "Important",
-    "Urgent",
-    "Personal",
-    "Business",
-    "Finance",
-    "Legal",
-    "Tax",
-    "Insurance",
-    "design",
-    "prototype",
-    "wireframe",
-    "mockup",
-    "final",
-    "approved",
-    "revision",
-    "draft",
-  ];
+  // Use tag objects directly rather than just the names
+  // This will allow us to use the IDs in the checkbox components
 
   // Sample correspondents data
   const correspondents = [
@@ -371,6 +354,8 @@ export default function ProjectDetailPage() {
 
   // State for document types
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+  // Array of document type names for the SearchFilterBar component
+  const [documentTypeNames, setDocumentTypeNames] = useState<string[]>([]);
 
   // Convert document types from API to format needed for dropdown - include both name and id
   const documentTypeOptions = documentTypes.map((type) => ({
@@ -388,11 +373,9 @@ export default function ProjectDetailPage() {
     // Tag filter - check if document has any of the selected tags
     const matchesTags =
       selectedTags.length === 0 ||
-      (doc.tags &&
-        doc.tags.some((tagId) => {
-          const tag = tags.find((t) => t.id === tagId);
-          return tag && selectedTags.includes(tag.name);
-        }));
+      doc.tags.some((tagId) => 
+        selectedTags.includes(tagId.toString())
+      );
 
     // Financial Year filter
     // We'll skip financial year filtering since API documents don't have this field directly
@@ -426,7 +409,7 @@ export default function ProjectDetailPage() {
         selectedDocumentType={selectedDocumentType}
         setSelectedDocumentType={setSelectedDocumentType}
         onNewDocument={() => setIsNewDocModalOpen(true)}
-        allTags={tagOptions}
+        allTags={tags}
         financialYears={financialYears}
         documentTypes={documentTypeOptions.map(type => type.name)}
       />
@@ -597,7 +580,7 @@ export default function ProjectDetailPage() {
       <NewDocumentModal
         isOpen={isNewDocModalOpen}
         onClose={() => setIsNewDocModalOpen(false)}
-        allTags={allTags}
+        allTags={tags.map(tag => tag.name)}
         correspondents={correspondents}
         documentTypes={documentTypeOptions.map(type => type.name)}
         projectId={projectId} // Pass project ID for API association

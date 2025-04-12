@@ -3,6 +3,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, ChevronDown, Plus } from "lucide-react";
 
+interface Tag {
+  id: number;
+  name: string;
+  color?: string;
+}
+
 interface SearchFilterBarProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
@@ -13,7 +19,7 @@ interface SearchFilterBarProps {
   selectedDocumentType: string;
   setSelectedDocumentType: (type: string) => void;
   onNewDocument: () => void;
-  allTags: string[];
+  allTags: Tag[];
   financialYears: string[];
   documentTypes: string[];
 }
@@ -80,13 +86,13 @@ export function SearchFilterBar({
 
   // Filter tags based on search term
   const filteredTags = allTags.filter((tag) =>
-    tag.toLowerCase().includes(filterTagSearchTerm.toLowerCase())
+    tag.name.toLowerCase().includes(filterTagSearchTerm.toLowerCase())
   );
 
   // Toggle tag selection
-  const toggleTag = (tag: string) => {
+  const toggleTag = (tagId: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
     );
   };
 
@@ -139,21 +145,21 @@ export function SearchFilterBar({
                 {filteredTags.length > 0 ? (
                   filteredTags.map((tag) => (
                     <div
-                      key={tag}
+                      key={tag.id}
                       className="flex items-center p-2 hover:bg-gray-100 rounded-md"
                     >
                       <input
                         type="checkbox"
-                        id={`tag-${tag}`}
-                        checked={selectedTags.includes(tag)}
-                        onChange={() => toggleTag(tag)}
+                        id={`tag-${tag.id}`}
+                        checked={selectedTags.includes(tag.id.toString())}
+                        onChange={() => toggleTag(tag.id.toString())}
                         className="mr-2"
                       />
                       <label
-                        htmlFor={`tag-${tag}`}
+                        htmlFor={`tag-${tag.id}`}
                         className="text-sm cursor-pointer"
                       >
-                        {tag}
+                        {tag.name}
                       </label>
                     </div>
                   ))
