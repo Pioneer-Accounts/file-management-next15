@@ -260,11 +260,11 @@ export default function DashboardLayout({
             </div>
 
             <Link
-              href="/dashboard/users"
+              href="/dashboard/profile"
               className={`flex items-center ${
                 isCollapsed ? "justify-center" : "px-3"
               } py-2.5 text-sm font-medium rounded-md group ${
-                pathname === "/dashboard/users"
+                pathname === "/dashboard/profile"
                   ? "bg-blue-50 text-blue-700"
                   : "text-gray-700 hover:bg-gray-100"
               }`}
@@ -272,7 +272,7 @@ export default function DashboardLayout({
             >
               <Users
                 className={`${isCollapsed ? "" : "mr-3"} h-5 w-5 ${
-                  pathname === "/dashboard/users"
+                  pathname === "/dashboard/profile"
                     ? "text-blue-600"
                     : "text-gray-500 group-hover:text-gray-600"
                 }`}
