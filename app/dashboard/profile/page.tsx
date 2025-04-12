@@ -344,6 +344,17 @@ export default function ProfilePage() {
 
       // Refresh profile data
       await fetchUserProfile();
+      
+      // Dispatch a custom event to notify the layout that profile has been updated
+      const profileUpdateEvent = new CustomEvent('profileUpdated', {
+        detail: {
+          fullName: `${firstName} ${lastName}`.trim(),
+          email: profile?.user.email || '',
+          profilePic: previewUrl
+        }
+      });
+      window.dispatchEvent(profileUpdateEvent);
+      
       setSuccess("Profile updated successfully!");
     } catch (error) {
       console.error("Failed to update profile:", error);
