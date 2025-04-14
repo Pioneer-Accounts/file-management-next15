@@ -1,74 +1,32 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import {
-  FolderOpen,
-  Search,
-  Plus,
-  MoreHorizontal,
-  Info,
-  Share2,
-  Copy,
-  MoveRight,
-  Download,
-  Edit2,
-  Trash2,
-  ChevronDown,
-  X,
-  CalendarIcon,
-} from "lucide-react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
+import { Search, Plus, FolderOpen } from "lucide-react";
 import Cookies from "js-cookie";
+import ProjectCard from "@/components/projects/ProjectCard";
+import NewProjectModal from "@/components/projects/NewProjectModal";
+import FinancialYearFilter from "@/components/projects/FinancialYearFilter";
+
+// Define Project interface based on API response
+interface Project {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  status_display: string;
+  start_date: string | null;
+}
 
 export default function Projects() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeMenu, setActiveMenu] = useState<number | null>(null);
-  const [selectedFinancialYear, setSelectedFinancialYear] =
-    useState<string>("");
-  const [isFinancialYearDropdownOpen, setIsFinancialYearDropdownOpen] =
-    useState(false);
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
-  const [newJobName, setNewJobName] = useState("");
-  const [newJobDescription, setNewJobDescription] = useState("");
-  const [projectStartDate, setProjectStartDate] = useState<Date | null>(null);
-
-  // Define Project interface based on API response
-  interface Project {
-    id: number;
-    title: string;
-    description: string;
-    status: string;
-    status_display: string;
-    start_date: string | null;
-  }
-
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  
   // Replace hardcoded projects with state
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const menuRef = useRef<HTMLDivElement>(null);
-  const financialYearDropdownRef = useRef<HTMLDivElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Generate financial years from 1900 to current year
-  const generateFinancialYears = () => {
-    const currentYear = new Date().getFullYear();
-    const years = [];
-
-    // Start from current year and go back to 1900
-    for (let year = currentYear; year >= 1900; year--) {
-      years.push(`AY - ${year}-${(year + 1).toString().slice(-2)}`);
-    }
-
-    return years;
-  };
-  const [financialYearSearchTerm, setFinancialYearSearchTerm] = useState("");
-  // Replace hardcoded financial years with dynamically generated ones
-  const financialYears = generateFinancialYears();
-  // Filter financial years based on search term
-  const filteredFinancialYears = financialYears.filter((year) =>
-    year.toLowerCase().includes(financialYearSearchTerm.toLowerCase())
-  );
 
   // Function to fetch projects from API
   const fetchProjects = async (filters?: {
@@ -140,64 +98,36 @@ export default function Projects() {
 
   // Handle financial year selection
   const handleFinancialYearSelect = (year: string) => {
-    if (year === selectedFinancialYear) {
-      // Clear selection
-      setSelectedFinancialYear("");
-      // If there's a search term, maintain that filter
+    setSelectedFinancialYear(year);
+
+    if (!year) {
+      // If year is cleared
       if (searchTerm) {
         fetchProjects({ search: searchTerm });
       } else {
         fetchProjects(); // Reset to fetch all projects
       }
-    } else {
-      setSelectedFinancialYear(year);
+      return;
+    }
 
-      // Get date range from financial year
-      const dateRange = getDateRangeFromFinancialYear(year);
-      if (dateRange) {
-        // Include search term if present
-        if (searchTerm) {
-          fetchProjects({
-            min: dateRange.min,
-            max: dateRange.max,
-            search: searchTerm,
-          });
-        } else {
-          fetchProjects({
-            min: dateRange.min,
-            max: dateRange.max,
-          });
-        }
+    // Get date range from financial year
+    const dateRange = getDateRangeFromFinancialYear(year);
+    if (dateRange) {
+      // Include search term if present
+      if (searchTerm) {
+        fetchProjects({
+          min: dateRange.min,
+          max: dateRange.max,
+          search: searchTerm,
+        });
+      } else {
+        fetchProjects({
+          min: dateRange.min,
+          max: dateRange.max,
+        });
       }
     }
-    setIsFinancialYearDropdownOpen(false);
   };
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setActiveMenu(null);
-      }
-      if (
-        financialYearDropdownRef.current &&
-        !financialYearDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsFinancialYearDropdownOpen(false);
-      }
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node) &&
-        isNewJobModalOpen
-      ) {
-        setIsNewJobModalOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isNewJobModalOpen]);
 
   // Handle search input changes with debounce
   useEffect(() => {
@@ -238,11 +168,11 @@ export default function Projects() {
   }, [searchTerm]);
 
   // Handle job creation
-  const handleCreateJob = async () => {
-    if (!newJobName.trim()) {
-      return;
-    }
-
+  const handleCreateJob = async (projectData: {
+    title: string;
+    description: string;
+    start_date: string | null;
+  }) => {
     try {
       // Get access token from cookies
       const accessToken = Cookies.get("accessToken");
@@ -252,13 +182,9 @@ export default function Projects() {
       }
 
       // Prepare the request data
-      const projectData = {
-        title: newJobName,
-        description: newJobDescription,
+      const requestData = {
+        ...projectData,
         status: "unknown",
-        start_date: projectStartDate
-          ? projectStartDate.toISOString().split("T")[0]
-          : null,
       };
 
       // Make API call to create project
@@ -268,20 +194,14 @@ export default function Projects() {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(projectData),
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log("Project created successfully:", data);
-
-      // Reset form and close modal
-      setNewJobName("");
-      setNewJobDescription("");
-      setProjectStartDate(null);
+      // Close modal
       setIsNewJobModalOpen(false);
 
       // Refresh projects list
@@ -292,12 +212,90 @@ export default function Projects() {
     }
   };
 
-  // Filter projects based on search term
-  const filteredProjects = projects.filter(
-    (project) =>
-      project?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project?.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Handle project update
+  const handleUpdateProject = async (projectData: {
+    title: string;
+    description: string;
+    start_date: string | null;
+  }) => {
+    if (!editingProject) return;
+
+    try {
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      // Prepare the request data
+      const requestData = {
+        ...projectData,
+        status: editingProject.status,
+      };
+
+      // Make API call to update project
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/projects/${editingProject.id}/`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      // Close modal
+      setIsEditModalOpen(false);
+      setEditingProject(null);
+
+      // Refresh projects list
+      fetchProjects();
+    } catch (error) {
+      console.error("Failed to update project:", error);
+      alert("Failed to update project. Please try again.");
+    }
+  };
+
+  // Handle project deletion
+  const handleDeleteProject = async (projectId: number) => {
+    if (!confirm("Are you sure you want to delete this project?")) return;
+
+    try {
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      // Make API call to delete project
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      // Refresh projects list
+      fetchProjects();
+    } catch (error) {
+      console.error("Failed to delete project:", error);
+      alert("Failed to delete project. Please try again.");
+    }
+  };
 
   return (
     <div>
@@ -323,90 +321,10 @@ export default function Projects() {
           </div>
 
           {/* Financial Year Dropdown */}
-          <div className="relative" ref={financialYearDropdownRef}>
-            <button
-              onClick={() =>
-                setIsFinancialYearDropdownOpen(!isFinancialYearDropdownOpen)
-              }
-              className="flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white min-w-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <span className="text-sm truncate">
-                {selectedFinancialYear || "Select Financial Year"}
-              </span>
-              <ChevronDown className="h-4 w-4 text-gray-500" />
-            </button>
-
-            {isFinancialYearDropdownOpen && (
-              <div className="absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg">
-                <div className="p-2 border-b border-gray-200">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search years..."
-                      className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      value={financialYearSearchTerm}
-                      onChange={(e) =>
-                        setFinancialYearSearchTerm(e.target.value)
-                      }
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    {financialYearSearchTerm && (
-                      <button
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFinancialYearSearchTerm("");
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="max-h-60 overflow-y-auto">
-                  {filteredFinancialYears.length > 0 ? (
-                    filteredFinancialYears.map((year) => (
-                      <div
-                        key={year}
-                        className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
-                          selectedFinancialYear === year ? "bg-blue-50" : ""
-                        }`}
-                        onClick={() => handleFinancialYearSelect(year)}
-                      >
-                        <span className="text-sm">{year}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-2 text-sm text-gray-500 text-center">
-                      No matching years found
-                    </div>
-                  )}
-                </div>
-
-                {selectedFinancialYear && (
-                  <div className="border-t border-gray-200 mt-2 pt-2 flex justify-end px-2 pb-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedFinancialYear("");
-                        setIsFinancialYearDropdownOpen(false);
-                        // Maintain search term if present
-                        if (searchTerm) {
-                          fetchProjects({ search: searchTerm });
-                        } else {
-                          fetchProjects(); // Reset to fetch all projects
-                        }
-                      }}
-                      className="text-xs text-blue-500 hover:text-blue-700"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <FinancialYearFilter 
+            selectedYear={selectedFinancialYear}
+            onYearSelect={handleFinancialYearSelect}
+          />
         </div>
 
         <button
@@ -419,108 +337,29 @@ export default function Projects() {
       </div>
 
       {/* New Job Modal */}
-      {isNewJobModalOpen && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
-          <div
-            ref={modalRef}
-            className="bg-white rounded-lg shadow-xl w-full max-w-lg"
-          >
-            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
-              <h2 className="text-xl font-semibold text-gray-800">
-                Create New Job
-              </h2>
-              <button
-                onClick={() => setIsNewJobModalOpen(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      <NewProjectModal
+        isOpen={isNewJobModalOpen}
+        onClose={() => setIsNewJobModalOpen(false)}
+        onSubmit={handleCreateJob}
+        mode="create"
+      />
 
-            <div className="p-6 space-y-4">
-              <div>
-                <label
-                  htmlFor="jobName"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Name
-                </label>
-                <input
-                  id="jobName"
-                  type="text"
-                  value={newJobName}
-                  onChange={(e) => setNewJobName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter job name"
-                />
-              </div>
-
-              {/* Project Creation Date */}
-              <div>
-                <label
-                  htmlFor="projectCreationDate"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Project Creation Date
-                </label>
-                <div className="relative">
-                  <input
-                    id="projectCreationDate"
-                    type="date"
-                    value={
-                      projectStartDate
-                        ? projectStartDate.toISOString().split("T")[0]
-                        : ""
-                    }
-                    onChange={(e) => {
-                      const date = e.target.value
-                        ? new Date(e.target.value)
-                        : null;
-                      setProjectStartDate(date);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <CalendarIcon className="h-5 w-5 text-gray-400" />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="jobDescription"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Description
-                </label>
-                <textarea
-                  id="jobDescription"
-                  value={newJobDescription}
-                  onChange={(e) => setNewJobDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter job description"
-                  rows={4}
-                />
-              </div>
-            </div>
-
-            <div className="bg-gray-50 px-6 py-3 flex justify-end space-x-3 border-t border-gray-200">
-              <button
-                onClick={() => setIsNewJobModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateJob}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                disabled={!newJobName.trim()}
-              >
-                Create Job
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Edit Job Modal */}
+      {editingProject && (
+        <NewProjectModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingProject(null);
+          }}
+          onSubmit={handleUpdateProject}
+          initialData={{
+            title: editingProject.title,
+            description: editingProject.description || "",
+            start_date: editingProject.start_date,
+          }}
+          mode="edit"
+        />
       )}
 
       {/* Quick Access Section */}
@@ -549,63 +388,17 @@ export default function Projects() {
                   </div>
                 </div>
               ))
-          ) : filteredProjects.length > 0 ? (
-            filteredProjects.map((project) => (
-              <div key={project.id} className="relative">
-                <Link href={`/dashboard/projects/${project.id}`}>
-                  <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-gray-100 overflow-hidden">
-                    <div className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className={`p-3 rounded-md bg-blue-100`}>
-                          <FolderOpen className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <button
-                          className="text-gray-400 hover:text-gray-600 z-10"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setActiveMenu(
-                              activeMenu === project.id ? null : project.id
-                            );
-                          }}
-                        >
-                          <MoreHorizontal className="h-5 w-5" />
-                        </button>
-                      </div>
-                      <div className="mt-4">
-                        <h3 className="text-lg font-medium text-gray-800">
-                          {project.title}
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-1 line-clamp-1">
-                          {project.description}
-                        </p>
-                        {project.status_display && (
-                          <span className="inline-block mt-2 px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                            {project.status_display}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-
-                {/* Options Menu Dropdown */}
-                {activeMenu === project.id && (
-                  <div
-                    ref={menuRef}
-                    className="absolute right-2 top-12 bg-white rounded-md shadow-lg border border-gray-200 py-2 z-20 w-44"
-                  >
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      <Edit2 className="h-4 w-4 text-gray-500" />
-                      <span>Edit</span>
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-gray-100 hover:text-red-700">
-                      <Trash2 className="h-4 w-4" />
-                      <span>Delete</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+          ) : projects.length > 0 ? (
+            projects.map((project) => (
+              <ProjectCard 
+                key={project.id} 
+                project={project} 
+                onEdit={(project) => {
+                  setEditingProject(project);
+                  setIsEditModalOpen(true);
+                }}
+                onDelete={handleDeleteProject}
+              />
             ))
           ) : (
             <div className="col-span-full flex flex-col items-center justify-center py-10 text-center">
