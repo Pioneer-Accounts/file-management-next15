@@ -5,6 +5,7 @@ import { Search, Plus, FolderOpen } from "lucide-react";
 import Cookies from "js-cookie";
 import ProjectCard from "@/components/projects/ProjectCard";
 import NewProjectModal from "@/components/projects/NewProjectModal";
+import CreateProjectModal from "@/components/projects/CreateProjectModal";
 import FinancialYearFilter from "@/components/projects/FinancialYearFilter";
 
 // Define Project interface based on API response
@@ -19,11 +20,12 @@ interface Project {
 
 export default function Projects() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
+  const [selectedFinancialYear, setSelectedFinancialYear] =
+    useState<string>("");
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  
+
   // Replace hardcoded projects with state
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -188,14 +190,17 @@ export default function Projects() {
       };
 
       // Make API call to create project
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestData),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/projects/`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestData),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
@@ -303,7 +308,6 @@ export default function Projects() {
         <h1 className="text-2xl font-bold text-gray-800 mb-2">Jobs</h1>
         <p className="text-gray-600">Manage your job folders</p>
       </div>
-
       {/* Search and Add Project Row */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4 flex-grow">
@@ -321,7 +325,7 @@ export default function Projects() {
           </div>
 
           {/* Financial Year Dropdown */}
-          <FinancialYearFilter 
+          <FinancialYearFilter
             selectedYear={selectedFinancialYear}
             onYearSelect={handleFinancialYearSelect}
           />
@@ -335,82 +339,83 @@ export default function Projects() {
           <span>New Jobs</span>
         </button>
       </div>
-
-      {/* New Job Modal */}
-      <NewProjectModal
-        isOpen={isNewJobModalOpen}
-        onClose={() => setIsNewJobModalOpen(false)}
-        onSubmit={handleCreateJob}
-        mode="create"
-      />
-
-      {/* Edit Job Modal */}
-      {editingProject && (
-        <NewProjectModal
-          isOpen={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setEditingProject(null);
-          }}
-          onSubmit={handleUpdateProject}
-          initialData={{
-            title: editingProject.title,
-            description: editingProject.description || "",
-            start_date: editingProject.start_date,
-          }}
-          mode="edit"
+      <div>
+        {/* New Job Modal - Using CreateProjectModal */}
+        <CreateProjectModal
+          isOpen={isNewJobModalOpen}
+          onClose={() => setIsNewJobModalOpen(false)}
+          onSubmit={handleCreateJob}
+          mode="create"
         />
-      )}
 
-      {/* Quick Access Section */}
-      <div className="mb-10">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">
-          Quick Access
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
-          {isLoading ? (
-            // Loading state
-            Array(5)
-              .fill(0)
-              .map((_, index) => (
-                <div
-                  key={index}
-                  className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 animate-pulse"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="p-3 rounded-md bg-gray-200 w-12 h-12"></div>
-                    <div className="w-5 h-5 bg-gray-200 rounded"></div>
+        {/* Edit Job Modal - Using NewProjectModal */}
+        {editingProject && (
+          <NewProjectModal
+            isOpen={isEditModalOpen}
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setEditingProject(null);
+            }}
+            onSubmit={handleUpdateProject}
+            initialData={{
+              title: editingProject.title,
+              description: editingProject.description || "",
+              start_date: editingProject.start_date,
+            }}
+            mode="edit"
+          />
+        )}
+
+        {/* Quick Access Section */}
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold text-gray-700 mb-4">
+            Quick Access
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
+            {isLoading ? (
+              // Loading state
+              Array(5)
+                .fill(0)
+                .map((_, index) => (
+                  <div
+                    key={index}
+                    className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 animate-pulse"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="p-3 rounded-md bg-gray-200 w-12 h-12"></div>
+                      <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-100 rounded w-full"></div>
+                      <div className="h-4 bg-gray-100 rounded w-1/4 mt-2"></div>
+                    </div>
                   </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="h-5 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-100 rounded w-full"></div>
-                    <div className="h-4 bg-gray-100 rounded w-1/4 mt-2"></div>
-                  </div>
-                </div>
+                ))
+            ) : projects.length > 0 ? (
+              projects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onEdit={(project) => {
+                    setEditingProject(project);
+                    setIsEditModalOpen(true);
+                  }}
+                  onDelete={handleDeleteProject}
+                />
               ))
-          ) : projects.length > 0 ? (
-            projects.map((project) => (
-              <ProjectCard 
-                key={project.id} 
-                project={project} 
-                onEdit={(project) => {
-                  setEditingProject(project);
-                  setIsEditModalOpen(true);
-                }}
-                onDelete={handleDeleteProject}
-              />
-            ))
-          ) : (
-            <div className="col-span-full flex flex-col items-center justify-center py-10 text-center">
-              <FolderOpen className="h-12 w-12 text-gray-300 mb-3" />
-              <h3 className="text-lg font-medium text-gray-700">
-                No jobs found
-              </h3>
-              <p className="text-gray-500 mt-1">
-                Create a new job to get started
-              </p>
-            </div>
-          )}
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center py-10 text-center">
+                <FolderOpen className="h-12 w-12 text-gray-300 mb-3" />
+                <h3 className="text-lg font-medium text-gray-700">
+                  No jobs found
+                </h3>
+                <p className="text-gray-500 mt-1">
+                  Create a new job to get started
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
