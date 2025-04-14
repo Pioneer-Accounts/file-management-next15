@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { MoreVertical } from "lucide-react";
 import Cookies from "js-cookie";
+import { useRouter } from "next/navigation"; // Add this
 
 // Helper function to process base64 string to data URL
 function getImageUrlFromBase64(
@@ -70,6 +71,11 @@ export default function Documents() {
   const [selectedDocType, setSelectedDocType] = useState<string>("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const router = useRouter();
+
+  const handleViewDocument = (documentId: number) => {
+    router.push(`/dashboard/documents/${documentId}`);
+  };
 
   // Add interface for tag type
   interface Tag {
@@ -832,7 +838,7 @@ export default function Documents() {
 
                   {/* Action menu */}
                   <div className="absolute top-3 right-3">
-                    <button
+                    {/* <button
                       className="p-1.5 rounded-full bg-white bg-opacity-80 text-gray-500 hover:text-gray-700 hover:bg-opacity-100 relative"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -842,7 +848,7 @@ export default function Documents() {
                       }}
                     >
                       <MoreVertical className="w-4 h-4" />
-                    </button>
+                    </button> */}
 
                     {activeDropdown === doc.id && (
                       <div className="absolute right-0 top-8 w-36 bg-white rounded-md shadow-lg z-10 border border-gray-200 py-1">
@@ -889,9 +895,9 @@ export default function Documents() {
                       <button
                         className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
                         title="View"
-                        onClick={() => {
-                          // Handle view action
-                          console.log("View document", doc.id);
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDocument(doc.id);
                         }}
                       >
                         <Eye className="w-4 h-4" />
