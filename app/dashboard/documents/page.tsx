@@ -884,7 +884,9 @@ export default function Documents() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-gray-800 font-medium line-clamp-1">
-                        {doc.title}
+                        {doc.title.length > 20
+                          ? `${doc.title.slice(0, 20)}...`
+                          : doc.title}
                       </h3>
                       <p className="text-gray-500 text-sm mt-1">
                         {doc.created_date}
