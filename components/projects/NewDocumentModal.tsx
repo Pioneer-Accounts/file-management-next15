@@ -634,92 +634,96 @@ export function NewDocumentModal({
               {/* Correspondent and Document Type */}
               <div className="grid grid-cols-2 gap-4">
                 {/* Correspondent Dropdown */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Correspondent
-                  </label>
-                  <div className="relative" ref={correspondentDropdownRef}>
-                    <div className="flex">
-                      <div
-                        className="w-full px-3 py-2 border border-gray-300 rounded-l-md flex justify-between items-center cursor-pointer"
-                        onClick={() =>
-                          setIsCorrespondentDropdownOpen(
-                            !isCorrespondentDropdownOpen
-                          )
-                        }
-                      >
-                        <span>
-                          {selectedCorrespondent
-                            ? correspondents.find(
-                                (c) => c.id === selectedCorrespondent
-                              )?.name
-                            : "Select correspondent..."}
-                        </span>
-                        <ChevronDown className="h-4 w-4" />
-                      </div>
-                      <button
-                        className="px-2 py-2 bg-blue-600 text-white border border-blue-600 rounded-r-md hover:bg-blue-700"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsNewCorrespondentModalOpen(true);
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    {isCorrespondentDropdownOpen && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-                        <div className="p-2">
-                          <input
-                            type="text"
-                            value={correspondentSearchTerm}
-                            onChange={(e) =>
-                              setCorrespondentSearchTerm(e.target.value)
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Search correspondents..."
-                            onClick={(e) => e.stopPropagation()}
-                          />
+                <fieldset disabled className="opacity-50 cursor-not-allowed">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Correspondent
+                    </label>
+                    <div className="relative" ref={correspondentDropdownRef}>
+                      <div className="flex">
+                        <div
+                          className="w-full px-3 py-2 border border-gray-300 rounded-l-md flex justify-between items-center cursor-not-allowed"
+                          // onClick={() =>
+                          //   setIsCorrespondentDropdownOpen(
+                          //     !isCorrespondentDropdownOpen
+                          //   )
+                          // }
+                        >
+                          <span>
+                            {selectedCorrespondent
+                              ? correspondents.find(
+                                  (c) => c.id === selectedCorrespondent
+                                )?.name
+                              : "Select correspondent..."}
+                          </span>
+                          <ChevronDown className="h-4 w-4" />
                         </div>
-                        <div className="max-h-60 overflow-y-auto">
-                          {correspondents
-                            .filter((c) =>
+                        <button
+                          className="px-2 py-2 bg-blue-600 text-white border border-blue-600 rounded-r-md hover:bg-blue-700 cursor-not-allowed"
+                          // onClick={(e) => {
+                          //   e.stopPropagation();
+                          //   setIsNewCorrespondentModalOpen(true);
+                          // }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {isCorrespondentDropdownOpen && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+                          <div className="p-2">
+                            <input
+                              type="text"
+                              value={correspondentSearchTerm}
+                              onChange={(e) =>
+                                setCorrespondentSearchTerm(e.target.value)
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Search correspondents..."
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div className="max-h-60 overflow-y-auto">
+                            {correspondents
+                              .filter((c) =>
+                                c.name
+                                  .toLowerCase()
+                                  .includes(
+                                    correspondentSearchTerm.toLowerCase()
+                                  )
+                              )
+                              .map((correspondent) => (
+                                <div
+                                  key={correspondent.id}
+                                  className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                                    selectedCorrespondent === correspondent.id
+                                      ? "bg-blue-50"
+                                      : ""
+                                  }`}
+                                  onClick={() => {
+                                    setSelectedCorrespondent(correspondent.id);
+                                    setIsCorrespondentDropdownOpen(false);
+                                    setCorrespondentSearchTerm("");
+                                  }}
+                                >
+                                  {correspondent.name}
+                                </div>
+                              ))}
+                            {correspondents.filter((c) =>
                               c.name
                                 .toLowerCase()
                                 .includes(correspondentSearchTerm.toLowerCase())
-                            )
-                            .map((correspondent) => (
-                              <div
-                                key={correspondent.id}
-                                className={`p-2 hover:bg-gray-100 cursor-pointer ${
-                                  selectedCorrespondent === correspondent.id
-                                    ? "bg-blue-50"
-                                    : ""
-                                }`}
-                                onClick={() => {
-                                  setSelectedCorrespondent(correspondent.id);
-                                  setIsCorrespondentDropdownOpen(false);
-                                  setCorrespondentSearchTerm("");
-                                }}
-                              >
-                                {correspondent.name}
+                            ).length === 0 && (
+                              <div className="p-2 text-gray-500 text-center">
+                                No correspondent found
                               </div>
-                            ))}
-                          {correspondents.filter((c) =>
-                            c.name
-                              .toLowerCase()
-                              .includes(correspondentSearchTerm.toLowerCase())
-                          ).length === 0 && (
-                            <div className="p-2 text-gray-500 text-center">
-                              No correspondent found
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
+                </fieldset>
 
                 {/* Document Type Dropdown */}
                 <div>
