@@ -22,14 +22,16 @@ export default function NewProjectModal({
   onClose,
   onSubmit,
   initialData = { title: "", description: "", start_date: null },
-  mode = "create"
+  mode = "create",
 }: NewProjectModalProps) {
   const [projectName, setProjectName] = useState(initialData.title);
-  const [projectDescription, setProjectDescription] = useState(initialData.description);
+  const [projectDescription, setProjectDescription] = useState(
+    initialData.description
+  );
   const [projectStartDate, setProjectStartDate] = useState<Date | null>(
     initialData.start_date ? new Date(initialData.start_date) : null
   );
-  
+
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Reset form when modal opens with new data
@@ -37,14 +39,20 @@ export default function NewProjectModal({
     if (isOpen) {
       setProjectName(initialData.title);
       setProjectDescription(initialData.description);
-      setProjectStartDate(initialData.start_date ? new Date(initialData.start_date) : null);
+      setProjectStartDate(
+        initialData.start_date ? new Date(initialData.start_date) : null
+      );
     }
   }, [isOpen, initialData]);
 
   // Close modal when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node) && isOpen) {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node) &&
+        isOpen
+      ) {
         onClose();
       }
     }
@@ -56,13 +64,14 @@ export default function NewProjectModal({
 
   const handleSubmit = () => {
     if (!projectName.trim()) return;
-    
+
     onSubmit({
       title: projectName,
       description: projectDescription,
-      start_date: projectStartDate ? projectStartDate.toISOString().split("T")[0] : null,
+      start_date: projectStartDate
+        ? projectStartDate.toISOString().split("T")[0]
+        : null,
     });
-    
     // Reset form
     setProjectName("");
     setProjectDescription("");
@@ -125,9 +134,7 @@ export default function NewProjectModal({
                     : ""
                 }
                 onChange={(e) => {
-                  const date = e.target.value
-                    ? new Date(e.target.value)
-                    : null;
+                  const date = e.target.value ? new Date(e.target.value) : null;
                   setProjectStartDate(date);
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
