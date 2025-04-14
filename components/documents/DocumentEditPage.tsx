@@ -174,7 +174,7 @@ export function DocumentEditPage({
       // Set notes from the document - ensure each note has an id
       if (data.notes && data.notes.length > 0) {
         // Make sure each note has an id property
-        const notesWithIds = data.notes.map((note, index) =>
+        const notesWithIds = data.notes.map((note: { id?: number; note: string }, index: number) =>
           note.id ? note : { ...note, id: `temp-${index}` }
         );
         setDocumentNotes(notesWithIds);
