@@ -584,6 +584,10 @@ export default function ProjectDetailPage() {
         correspondents={correspondents}
         documentTypes={documentTypeOptions.map(type => type.name)}
         projectId={projectId} // Pass project ID for API association
+        onDocumentUploaded={() => {
+          // Refresh the document list when a new document is uploaded
+          fetchDocuments();
+        }}
       />
     </div>
   );

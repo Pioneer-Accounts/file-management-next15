@@ -24,6 +24,7 @@ interface NewDocumentModalProps {
   correspondents: { id: string; name: string }[];
   documentTypes: string[];
   projectId?: string; // Optional project ID for associating document with project
+  onDocumentUploaded?: () => void; // Callback to notify parent component that a document was uploaded
 }
 
 export function NewDocumentModal({
@@ -33,6 +34,7 @@ export function NewDocumentModal({
   correspondents,
   documentTypes: propDocumentTypes,
   projectId,
+  onDocumentUploaded,
 }: NewDocumentModalProps) {
   // States for document creation
   const [newDocTitle, setNewDocTitle] = useState("");
@@ -373,6 +375,12 @@ export function NewDocumentModal({
 
       // Reset form and close modal
       resetForm();
+      
+      // Notify parent component that a document was uploaded
+      if (onDocumentUploaded) {
+        onDocumentUploaded();
+      }
+      
       onClose();
     } catch (error) {
       console.error("Failed to upload document:", error);
