@@ -127,12 +127,12 @@ export function DocumentEditPage({
     try {
       setIsLoading(true);
       setError(null);
-
+  
       const accessToken = Cookies.get("accessToken");
       if (!accessToken) {
         throw new Error("Authentication token not found");
       }
-
+  
       const response = await fetch(`http://localhost:8000/documents/${documentId}/`, {
         method: "GET",
         headers: {
@@ -140,12 +140,12 @@ export function DocumentEditPage({
           "Content-Type": "application/json",
         },
       });
-
+  
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to fetch document: ${response.status} ${errorText}`);
       }
-
+  
       const data = await response.json();
       setDocumentData(data);
       
@@ -156,9 +156,13 @@ export function DocumentEditPage({
       setSelectedDocTypeId(data.document_type);
       setSelectedTags(data.tags || []);
       
-      // Set notes from the document
+      // Set notes from the document - ensure each note has an id
       if (data.notes && data.notes.length > 0) {
-        setDocumentNotes(data.notes);
+        // Make sure each note has an id property
+        const notesWithIds = data.notes.map((note, index) => 
+          note.id ? note : { ...note, id: `temp-${index}` }
+        );
+        setDocumentNotes(notesWithIds);
       }
     } catch (error) {
       console.error("Error fetching document:", error);
@@ -167,7 +171,6 @@ export function DocumentEditPage({
       setIsLoading(false);
     }
   };
-
   // Fetch tags from API
   const fetchTags = async () => {
     try {
@@ -273,6 +276,53 @@ export function DocumentEditPage({
     );
   };
 
+  const handleCreateTag = async (tagName: string, color: string) => {
+    try {
+      const accessToken = Cookies.get("accessToken");
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+      
+      const response = await fetch("http://localhost:8000/tags/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: tagName,
+          color: color || "#3b82f6" // Use the color from the color picker
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to create tag: ${response.status}`);
+      }
+      
+      const newTag = await response.json();
+      
+      // Add the new tag to the tagList
+      setTagList(prev => [...prev, newTag]);
+      
+      // Add the new tag to selectedTags (by ID)
+      setSelectedTags(prev => [...prev, newTag.id]);
+      
+      // Add the new tag name to selectedTagNames
+      setSelectedTagNames(prev => [...prev, newTag.name]);
+      
+      // Refresh the tag list to include the new tag
+      fetchTags();
+      
+      return newTag;
+    } catch (error) {
+      console.error("Error creating tag:", error);
+      setSaveError(error instanceof Error ? error.message : "Failed to create tag");
+      return null;
+    }
+  };
+
+  
+
   // Handle saving document changes
   const handleSaveDocument = async () => {
     try {
@@ -354,9 +404,17 @@ export function DocumentEditPage({
       
       const addedNote = await response.json();
       
-      // Update the notes list with the new note
-      setDocumentNotes(prev => [...prev, addedNote]);
-      setNewNote(""); // Clear the input field
+      // Ensure we're adding a properly structured note object
+      if (typeof addedNote === 'object' && addedNote !== null) {
+        // Update the notes list with the new note
+        setDocumentNotes(prev => [...prev, addedNote]);
+        setNewNote(""); // Clear the input field
+        
+        // Refresh document details to ensure we have the latest data
+        fetchDocumentDetails();
+      } else {
+        throw new Error("Invalid note data received from server");
+      }
       
     } catch (error) {
       console.error("Error adding note:", error);
@@ -401,15 +459,18 @@ export function DocumentEditPage({
   };
 
   useEffect(() => {
-    if (tagList.length > 0 && selectedTagNames.length > 0) {
-      const tagIds = selectedTagNames.map(name => {
-        const tag = tagList.find(t => t.name === name);
-        return tag ? tag.id : null;
-      }).filter(id => id !== null) as number[];
-      
-      setSelectedTags(tagIds);
-    } else if (selectedTagNames.length === 0) {
-      setSelectedTags([]);
+    if (tagList.length > 0) {
+      if (selectedTagNames.length > 0) {
+        // Convert tag names to tag IDs
+        const tagIds = selectedTagNames.map(name => {
+          const tag = tagList.find(t => t.name === name);
+          return tag ? tag.id : null;
+        }).filter(id => id !== null) as number[];
+        
+        setSelectedTags(tagIds);
+      } else if (selectedTagNames.length === 0) {
+        setSelectedTags([]);
+      }
     }
   }, [selectedTagNames, tagList]);
 
@@ -640,7 +701,9 @@ export function DocumentEditPage({
                   </div>
                   {isViewMode ? (
                     <p className="text-gray-900 py-2 border-b border-gray-200">
-                      {documentData?.created ? format(new Date(documentData.created), "MMMM d, yyyy") : "No date"}
+                      {documentData?.created 
+                        ? format(new Date(documentData.created), "MMMM d, yyyy") 
+                        : "No date"}
                     </p>
                   ) : (
                     <input
@@ -658,7 +721,7 @@ export function DocumentEditPage({
                 </div>
                 
                 {/* Correspondent */}
-                <div className="mb-4">
+                {/* <div className="mb-4">
                   <div className="flex items-center mb-1">
                     <User className="h-4 w-4 text-gray-500 mr-2" />
                     <label className="text-sm font-medium text-gray-700">
@@ -736,7 +799,7 @@ export function DocumentEditPage({
                       )}
                     </div>
                   )}
-                </div>
+                </div> */}
                 
                 {/* Document Type */}
                 <div className="mb-4">
@@ -835,16 +898,17 @@ export function DocumentEditPage({
                   </div>
                   {isViewMode ? (
                     <div className="flex flex-wrap gap-2 py-2 border-b border-gray-200">
-                      {selectedTagNames.length > 0 ? (
-                        selectedTagNames.map((tagName) => {
-                          const tag = tagList.find((t) => t.name === tagName);
+                      {selectedTags.length > 0 ? (
+                        selectedTags.map((tagId) => {
+                          const tag = tagList.find((t) => t.id === tagId);
                           return tag ? (
                             <span
                               key={tag.id}
-                              className="text-xs px-2 py-1 rounded"
+                              className="text-xs px-2 py-1 rounded font-medium"
                               style={{
                                 backgroundColor: `${tag.color}20`,
                                 color: tag.color,
+                                border: `1px solid ${tag.color}`
                               }}
                             >
                               {tag.name}
@@ -859,6 +923,7 @@ export function DocumentEditPage({
                     <TagSelect 
                       selectedTags={selectedTagNames}
                       setSelectedTags={setSelectedTagNames}
+                      onCreateTag={handleCreateTag}
                     />
                   )}
                 </div>
@@ -873,14 +938,14 @@ export function DocumentEditPage({
                   {/* Existing notes */}
                   <div className="max-h-[300px] overflow-y-auto">
                     {documentNotes && documentNotes.length > 0 ? (
-                      documentNotes.map((note) => (
-                        <div key={note.id} className="p-3 border-b border-gray-200">
+                      documentNotes.map((note, index) => (
+                        <div key={note.id || `note-${index}`} className="p-3 border-b border-gray-200">
                           <div className="flex justify-between items-start mb-1">
                             <span className="text-xs text-gray-500">
-                              {new Date(note.created).toLocaleString()}
+                              {note.created ? new Date(note.created).toLocaleString() : "Unknown date"}
                             </span>
                           </div>
-                          <p className="whitespace-pre-wrap text-sm">{note.note}</p>
+                          <p className="whitespace-pre-wrap text-sm">{typeof note.note === 'string' ? note.note : 'No content'}</p>
                         </div>
                       ))
                     ) : (
@@ -955,12 +1020,45 @@ export function DocumentEditPage({
           fieldLabel="Correspondent Name"
           fieldValue={newCorrespondentName}
           onFieldChange={setNewCorrespondentName}
-          onSave={() => {
+          onSave={async () => {
             if (newCorrespondentName.trim()) {
-              // Create a new correspondent with a unique ID
-              // In a real implementation, you would call the API to create a correspondent
-              setIsNewCorrespondentModalOpen(false);
-              setNewCorrespondentName("");
+              try {
+                const accessToken = Cookies.get("accessToken");
+                if (!accessToken) {
+                  throw new Error("Authentication token not found");
+                }
+                
+                const response = await fetch("http://localhost:8000/correspondents/", {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    name: newCorrespondentName
+                  }),
+                });
+                
+                if (!response.ok) {
+                  throw new Error(`Failed to create correspondent: ${response.status}`);
+                }
+                
+                const newCorrespondent = await response.json();
+                // Add the new correspondent to the list
+                correspondents.push({
+                  id: newCorrespondent.id.toString(),
+                  name: newCorrespondent.name
+                });
+                
+                // Select the newly created correspondent
+                setSelectedCorrespondent(newCorrespondent.id.toString());
+                
+                setIsNewCorrespondentModalOpen(false);
+                setNewCorrespondentName("");
+              } catch (error) {
+                console.error("Error creating correspondent:", error);
+                setSaveError(error instanceof Error ? error.message : "Failed to create correspondent");
+              }
             }
           }}
           onClose={() => setIsNewCorrespondentModalOpen(false)}
@@ -974,13 +1072,43 @@ export function DocumentEditPage({
           fieldLabel="Document Type Name"
           fieldValue={newDocTypeName}
           onFieldChange={setNewDocTypeName}
-          onSave={() => {
+          onSave={async () => {
             if (newDocTypeName.trim()) {
-              // In a real implementation, you would call the API to create a document type
-              setIsNewDocTypeModalOpen(false);
-              setNewDocTypeName("");
-              // After creating a document type, refresh the list
-              fetchDocumentTypes();
+              try {
+                const accessToken = Cookies.get("accessToken");
+                if (!accessToken) {
+                  throw new Error("Authentication token not found");
+                }
+                
+                const response = await fetch("http://localhost:8000/document-type/", {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    name: newDocTypeName
+                  }),
+                });
+                
+                if (!response.ok) {
+                  throw new Error(`Failed to create document type: ${response.status}`);
+                }
+                
+                const newDocType = await response.json();
+                
+                // After creating a document type, refresh the list
+                fetchDocumentTypes();
+                
+                // Select the newly created document type
+                setSelectedDocTypeId(newDocType.id);
+                
+                setIsNewDocTypeModalOpen(false);
+                setNewDocTypeName("");
+              } catch (error) {
+                console.error("Error creating document type:", error);
+                setSaveError(error instanceof Error ? error.message : "Failed to create document type");
+              }
             }
           }}
           onClose={() => setIsNewDocTypeModalOpen(false)}

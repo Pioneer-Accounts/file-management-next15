@@ -1,31 +1,9 @@
 "use client";
 
-import * as React from "react";
-import { useState, useEffect } from "react";
-import { Check, ChevronsUpDown, Plus, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
-import { HexColorPicker } from "react-colorful";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
-const domain = process.env.NEXT_PUBLIC_API_URL
-
+import { useState, useEffect, useRef } from "react";
+import { ChevronDown, X, Plus, Search } from "lucide-react";
+import Cookies from "js-cookie";
+import { NewTagModal } from "@/components/NewTagModal";
 
 interface Tag {
   id: number;
@@ -35,255 +13,264 @@ interface Tag {
 
 interface TagSelectProps {
   selectedTags: string[];
-  setSelectedTags: React.Dispatch<React.SetStateAction<string[]>>;
+  setSelectedTags: (tags: string[]) => void;
+  onCreateTag?: (tagName: string, color: string) => Promise<any>;
 }
 
-export function TagSelect({ selectedTags, setSelectedTags }: TagSelectProps) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+export function TagSelect({ selectedTags, setSelectedTags, onCreateTag }: TagSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [tags, setTags] = useState<Tag[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newTagName, setNewTagName] = useState("");
-  const [newTagColor, setNewTagColor] = useState("#3B82F6"); // Default blue color
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isNewTagModalOpen, setIsNewTagModalOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch tags from API
-  useEffect(() => {
-    const fetchTags = async () => {
-      setLoading(true);
-      try {
-        const url = search ? `${domain}/tags/?search=${encodeURIComponent(search)}` : `${domain}/tags/`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Failed to fetch tags");
-        const data = await response.json();
-        setTags(data);
-      } catch (error) {
-        console.error("Error fetching tags:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Debounce the search
-    const timer = setTimeout(() => {
-      fetchTags();
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  // Create a new tag
-  const createTag = async () => {
-    if (!newTagName.trim()) return;
-
+  const fetchTags = async () => {
     try {
-      const response = await fetch(`${domain}/tags/`, {
-        method: "POST",
+      setIsLoading(true);
+      setError(null);
+
+      const accessToken = Cookies.get("accessToken");
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch("http://localhost:8000/tags", {
+        method: "GET",
         headers: {
+          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: newTagName.trim(),
-          color: newTagColor,
-        }),
       });
 
-      if (!response.ok) throw new Error("Failed to create tag");
-      
-      const newTag = await response.json();
-      setTags((prev) => [...prev, newTag]);
-      setSelectedTags((prev) => [...prev, newTag.name]);
-      
-      // Reset form
-      setNewTagName("");
-      setNewTagColor("#3B82F6");
-      setCreateDialogOpen(false);
+      if (response.ok) {
+        const data = await response.json();
+        setTags(data);
+      } else {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch tags: ${response.status} ${errorText}`);
+      }
     } catch (error) {
-      console.error("Error creating tag:", error);
+      console.error("Error fetching tags:", error);
+      setError(error instanceof Error ? error.message : "An unknown error occurred");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Toggle tag selection
-  const toggleTag = (tagName: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tagName)
-        ? prev.filter((t) => t !== tagName)
-        : [...prev, tagName]
-    );
+  // Load tags when component mounts
+  useEffect(() => {
+    fetchTags();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Handle removing a tag
+  const handleRemoveTag = (tagToRemove: string) => {
+    setSelectedTags(selectedTags.filter((tag) => tag !== tagToRemove));
   };
 
-  // Remove a tag from selection
-  const removeTag = (tagName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedTags((prev) => prev.filter((t) => t !== tagName));
+  // Handle clearing all tags
+  const handleClearAll = () => {
+    setSelectedTags([]);
   };
+
+  // Handle creating a new tag
+  const handleCreateNewTag = async (tagName: string, color: string) => {
+    if (!tagName.trim() || !onCreateTag) return;
+    
+    const newTag = await onCreateTag(tagName.trim(), color);
+    if (newTag) {
+      // Add the new tag to the tags list
+      setTags(prevTags => [...prevTags, newTag]);
+      
+      // Add the new tag to selected tags
+      if (!selectedTags.includes(newTag.name)) {
+        setSelectedTags([...selectedTags, newTag.name]);
+      }
+      
+      setSearchTerm("");
+      setIsOpen(false);
+    }
+  };
+
+  // Filter tags based on search term
+  const filteredTags = tags.filter((tag) =>
+    tag.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="w-full">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
-            {selectedTags.length > 0 ? (
-              <span className="text-sm truncate">
-                {selectedTags.length} tag{selectedTags.length > 1 ? "s" : ""} selected
-              </span>
-            ) : (
-              <span className="text-sm text-muted-foreground">Filter by tags</span>
-            )}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[300px] p-0 bg-white text-black shadow-md">
-          <Command>
-            <CommandInput 
-              placeholder="Search tags..." 
-              value={search}
-              onValueChange={setSearch}
-            />
-            <CommandList>
-              <CommandEmpty>
-                {loading ? (
-                  <p className="py-2 text-center text-sm">Loading tags...</p>
-                ) : (
-                  <div className="flex items-center p-2 border-t">
-                    <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="text-xs">
-                          <Plus className="mr-1 h-3 w-3" />
-                          Create new tag
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Create New Tag</DialogTitle>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="tag-name">Tag Name</Label>
-                            <Input
-                              id="tag-name"
-                              value={newTagName}
-                              onChange={(e) => setNewTagName(e.target.value)}
-                              placeholder="Enter tag name"
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label>Tag Color</Label>
-                            <HexColorPicker 
-                              color={newTagColor} 
-                              onChange={setNewTagColor} 
-                              className="w-full" 
-                            />
-                            <div className="flex items-center gap-2 mt-2">
-                              <div 
-                                className="w-6 h-6 rounded-full border" 
-                                style={{ backgroundColor: newTagColor }}
-                              />
-                              <Input
-                                value={newTagColor}
-                                onChange={(e) => setNewTagColor(e.target.value)}
-                                className="w-28"
-                              />
-                            </div>
-                          </div>
-                          <Button onClick={createTag}>Create Tag</Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                )}
-              </CommandEmpty>
-              <CommandGroup>
-                {tags.map((tag) => (
-                  <CommandItem
-                    key={tag.id}
-                    value={tag.name}
-                    onSelect={() => toggleTag(tag.name)}
-                  >
-                    <div className="flex items-center w-full">
-                      <div 
-                        className="w-3 h-3 rounded-full mr-2" 
-                        style={{ backgroundColor: tag.color }}
-                      />
-                      <span>{tag.name}</span>
-                      <Check
-                        className={cn(
-                          "ml-auto h-4 w-4",
-                          selectedTags.includes(tag.name) ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-            <div className="flex items-center p-2 border-t">
-              <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-xs">
-                    <Plus className="mr-1 h-3 w-3" />
-                    Create new tag
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
-            </div>
-          </Command>
-        </PopoverContent>
-      </Popover>
-
-      {/* Display selected tags */}
-      {selectedTags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {selectedTags.map((tagName) => {
-            const tag = tags.find((t) => t.name === tagName);
-            return (
-              <Badge 
-                key={tagName} 
-                style={{ 
-                  backgroundColor: tag?.color || "#3B82F6",
-                  color: getContrastColor(tag?.color || "#3B82F6")
-                }}
-                className="px-2 py-1"
-              >
-                {tagName}
-                <X
-                  className="ml-1 h-3 w-3 cursor-pointer"
-                  onClick={(e) => removeTag(tagName, e)}
-                />
-              </Badge>
-            );
-          })}
-          {selectedTags.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs"
-              onClick={() => setSelectedTags([])}
-            >
-              Clear all
-            </Button>
+    <div className="relative" ref={dropdownRef}>
+      {/* Selected tags display */}
+      <div
+        className="w-full px-3 py-2 border border-gray-300 rounded-md flex justify-between items-center cursor-pointer"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex flex-wrap gap-1 flex-1">
+          {selectedTags.length > 0 ? (
+            <>
+              <span className="text-gray-700">{selectedTags.length} tags selected</span>
+            </>
+          ) : (
+            <span className="text-gray-500">Select tags...</span>
           )}
         </div>
+        <ChevronDown className="h-4 w-4 text-gray-500" />
+      </div>
+
+      {/* Selected tags below the input */}
+      {selectedTags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {selectedTags.map((tag) => {
+            // Find the tag object to get its color
+            const tagObj = tags.find(t => t.name === tag);
+            return (
+              <div
+                key={tag}
+                className="flex items-center rounded px-2 py-1 text-sm"
+                style={{
+                  backgroundColor: tagObj ? `${tagObj.color}20` : '#e6f2ff',
+                  color: '#000000', // Black text for better visibility
+                  border: `1px solid ${tagObj ? tagObj.color : '#3b82f6'}`
+                }}
+              >
+                {tag}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveTag(tag);
+                  }}
+                  className="ml-1 hover:opacity-70"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClearAll();
+            }}
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {/* Dropdown */}
+      {isOpen && (
+        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+          {/* Search input */}
+          <div className="p-2 border-b border-gray-200 flex items-center">
+            <Search className="h-4 w-4 text-gray-400 mr-2" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full focus:outline-none text-sm"
+              placeholder="Search tags..."
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+
+          {/* Create new tag button */}
+          <div className="p-2 border-b border-gray-200">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsNewTagModalOpen(true);
+              }}
+              className="w-full px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors flex items-center justify-center"
+            >
+              <Plus className="h-3 w-3 mr-1.5" />
+              Create New Tag
+            </button>
+          </div>
+
+          {/* Tags list */}
+          <div className="max-h-60 overflow-y-auto">
+            {isLoading ? (
+              <div className="p-4 text-center">
+                <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-500">Loading tags...</p>
+              </div>
+            ) : error ? (
+              <div className="p-4 text-center text-red-500">
+                {error}
+                <button
+                  className="block mx-auto mt-2 text-blue-500 hover:text-blue-700"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fetchTags();
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <>
+                {filteredTags.map((tag) => (
+                  <div
+                    key={tag.id}
+                    className={`p-2 hover:bg-gray-100 cursor-pointer flex items-center justify-between ${
+                      selectedTags.includes(tag.name) ? "bg-blue-50" : ""
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (selectedTags.includes(tag.name)) {
+                        setSelectedTags(selectedTags.filter((t) => t !== tag.name));
+                      } else {
+                        setSelectedTags([...selectedTags, tag.name]);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <div 
+                        className="w-4 h-4 rounded-full mr-2" 
+                        style={{ backgroundColor: tag.color }}
+                      ></div>
+                      <span>{tag.name}</span>
+                    </div>
+                    {selectedTags.includes(tag.name) && (
+                      <span className="text-blue-500">✓</span>
+                    )}
+                  </div>
+                ))}
+
+                {filteredTags.length === 0 && (
+                  <div className="p-2 text-gray-500 text-center">
+                    {searchTerm ? `No tags matching "${searchTerm}"` : "No tags available"}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* New Tag Modal */}
+      {isNewTagModalOpen && (
+        <NewTagModal
+          initialTagName={searchTerm}
+          onClose={() => setIsNewTagModalOpen(false)}
+          onSave={handleCreateNewTag}
+        />
       )}
     </div>
   );
-}
-
-// Helper function to determine text color based on background color
-function getContrastColor(hexColor: string): string {
-  // Convert hex to RGB
-  const r = parseInt(hexColor.slice(1, 3), 16);
-  const g = parseInt(hexColor.slice(3, 5), 16);
-  const b = parseInt(hexColor.slice(5, 7), 16);
-  
-  // Calculate luminance
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  
-  // Return black or white based on luminance
-  return luminance > 0.5 ? "#000000" : "#FFFFFF";
 }
