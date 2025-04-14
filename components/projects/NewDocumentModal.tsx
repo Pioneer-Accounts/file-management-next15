@@ -375,12 +375,12 @@ export function NewDocumentModal({
 
       // Reset form and close modal
       resetForm();
-      
+
       // Notify parent component that a document was uploaded
       if (onDocumentUploaded) {
         onDocumentUploaded();
       }
-      
+
       onClose();
     } catch (error) {
       console.error("Failed to upload document:", error);
@@ -502,11 +502,11 @@ export function NewDocumentModal({
                               return tag ? (
                                 <span
                                   key={tag.id}
-                                  className="text-xs px-2 py-1 rounded flex items-center"
-                                  style={{
-                                    backgroundColor: `${tag.color}20`,
-                                    color: tag.color,
-                                  }}
+                                  className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
+                                  // style={{
+                                  //   backgroundColor: `${tag.color}20`,
+                                  //   color: tag.color,
+                                  // }}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   {tag.name}
