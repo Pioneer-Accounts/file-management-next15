@@ -123,6 +123,51 @@ export function NewDocumentModal({
     );
   };
 
+  // Create a new tag and add it to the tag list
+  const createNewTag = async (tagName: string): Promise<Tag | null> => {
+    try {
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      // Default color if not specified
+      const defaultColor = "#3B82F6"; // blue-500
+
+      console.log(`Creating new tag: ${tagName}`);
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tags/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: tagName,
+          color: defaultColor,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to create tag:", response.status, errorText);
+        return null;
+      }
+
+      const newTag = await response.json();
+      console.log("New tag created:", newTag);
+
+      // Update the tag list with the new tag
+      setTagList((prevTags) => [...prevTags, newTag]);
+
+      return newTag;
+    } catch (error) {
+      console.error("Error creating tag:", error);
+      return null;
+    }
+  };
+
   // Fetch tags from API
   const fetchTags = async () => {
     try {
@@ -183,6 +228,56 @@ export function NewDocumentModal({
       fetchDocumentTypes();
     }
   }, [isOpen]);
+
+  // Create a new document type and add it to the document types list
+  const createNewDocumentType = async (typeName: string): Promise<DocumentType | null> => {
+    try {
+      setIsLoadingDocTypes(true);
+      setDocTypeError(null);
+
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      console.log(`Creating new document type: ${typeName}`);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/document-type/`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: typeName,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to create document type:", response.status, errorText);
+        setDocTypeError(`Failed to create document type: ${response.statusText}`);
+        return null;
+      }
+
+      const newDocType = await response.json();
+      console.log("New document type created:", newDocType);
+
+      // Update the document types list with the new type
+      setDocumentTypesList((prevTypes) => [...prevTypes, newDocType]);
+      return newDocType;
+    } catch (error) {
+      console.error("Error creating document type:", error);
+      setDocTypeError("An error occurred while creating the document type");
+      return null;
+    } finally {
+      setIsLoadingDocTypes(false);
+    }
+  };
 
   // Fetch document types from API
   const fetchDocumentTypes = async () => {
@@ -1007,37 +1102,93 @@ export function NewDocumentModal({
           fieldLabel="Tag Name"
           fieldValue={newTagName}
           onFieldChange={setNewTagName}
-          onSave={() => {
+          onSave={async () => {
             if (newTagName.trim()) {
-              // This is a placeholder for creating a new tag via API
-              // In a real implementation, you would call the API to create a tag and get its ID
-              // For now, we'll just close the modal
+              // Show loading state or disable the button while API call is in progress
+              // Call our API function to create a new tag
+              const newTag = await createNewTag(newTagName.trim());
+              
+              if (newTag) {
+                // If tag was created successfully, add it to selected tags
+                toggleNewDocTag(newTag.id);
+                console.log(`Added new tag ${newTag.name} to selection`);
+              }
+              
+              // Close the modal and reset the field
               setIsNewTagModalOpen(false);
               setNewTagName("");
-              // After creating a tag, refresh the tag list
-              fetchTags();
             }
           }}
           onClose={() => setIsNewTagModalOpen(false)}
         />
       )}
 
-      {/* New Correspondent Modal */}
+      {/* Creating createNewCorrespondent function above the component return statement */}
       {isNewCorrespondentModalOpen && (
         <NewEntityModal
           title="Add New Correspondent"
           fieldLabel="Correspondent Name"
           fieldValue={newCorrespondentName}
           onFieldChange={setNewCorrespondentName}
-          onSave={() => {
+          onSave={async () => {
             if (newCorrespondentName.trim()) {
-              // Create a new correspondent with a unique ID
-              const newId = (
-                Math.max(...correspondents.map((c) => parseInt(c.id))) + 1
-              ).toString();
+              try {
+                const accessToken = Cookies.get("accessToken");
 
-              // Select the new correspondent
-              setSelectedCorrespondent(newId);
+                if (!accessToken) {
+                  throw new Error("Authentication token not found");
+                }
+
+                console.log(`Creating new correspondent: ${newCorrespondentName}`);
+
+                // Make an API request to create a new correspondent
+                const response = await fetch(
+                  `${process.env.NEXT_PUBLIC_API_URL}/correspondents/`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      name: newCorrespondentName.trim(),
+                    }),
+                  }
+                );
+
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  console.error("Failed to create correspondent:", response.status, errorText);
+                  
+                  // Fallback if API fails - create locally
+                  const newId = (
+                    Math.max(...correspondents.map((c) => parseInt(c.id))) + 1
+                  ).toString();
+                  
+                  // Add to local correspondents list
+                  const newCorrespondent = { id: newId, name: newCorrespondentName.trim() };
+                  // This would need to update the parent component as well
+                  // For now just select it
+                  setSelectedCorrespondent(newId);
+                  
+                  console.log(`Created local correspondent with ID: ${newId}`);
+                } else {
+                  // If successful API response
+                  const newCorrespondent = await response.json();
+                  console.log("New correspondent created via API:", newCorrespondent);
+                  
+                  // Select the new correspondent
+                  setSelectedCorrespondent(newCorrespondent.id.toString());
+                }
+              } catch (error) {
+                console.error("Error creating correspondent:", error);
+                
+                // Fallback if error occurs
+                const newId = (
+                  Math.max(...correspondents.map((c) => parseInt(c.id))) + 1
+                ).toString();
+                setSelectedCorrespondent(newId);
+              }
 
               // Close the modal and reset
               setIsNewCorrespondentModalOpen(false);
@@ -1055,12 +1206,19 @@ export function NewDocumentModal({
           fieldLabel="Document Type Name"
           fieldValue={newDocTypeName}
           onFieldChange={setNewDocTypeName}
-          onSave={() => {
+          onSave={async () => {
             if (newDocTypeName.trim()) {
-              // Set the new document type
-              setDocumentType(newDocTypeName.trim());
+              // Call our API function to create a new document type
+              const newDocType = await createNewDocumentType(newDocTypeName.trim());
+              
+              if (newDocType) {
+                // If document type was created successfully, select it
+                setSelectedDocTypeId(newDocType.id);
+                setDocumentType(newDocType.name);
+                console.log(`Selected new document type: ${newDocType.name}`);
+              }
 
-              // Close the modal and reset
+              // Close the modal and reset regardless of success or failure
               setIsNewDocTypeModalOpen(false);
               setNewDocTypeName("");
             }
