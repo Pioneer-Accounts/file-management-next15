@@ -29,7 +29,7 @@ export default function AddDocumentTypePage() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch("http://localhost:8000/document-type/", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/document-type/`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -64,7 +64,7 @@ export default function AddDocumentTypePage() {
         }
 
         // Call the API to save the document type
-        const response = await fetch("http://localhost:8000/document-type/", {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/document-type/`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -105,7 +105,7 @@ export default function AddDocumentTypePage() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch(`http://localhost:8000/document-type/${docTypeId}/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/document-type/${docTypeId}/`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${accessToken}`,

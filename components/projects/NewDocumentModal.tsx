@@ -24,6 +24,7 @@ interface NewDocumentModalProps {
   correspondents: { id: string; name: string }[];
   documentTypes: string[];
   projectId?: string; // Optional project ID for associating document with project
+  onDocumentUploaded?: () => void; // Callback to notify parent component that a document was uploaded
 }
 
 export function NewDocumentModal({
@@ -33,6 +34,7 @@ export function NewDocumentModal({
   correspondents,
   documentTypes: propDocumentTypes,
   projectId,
+  onDocumentUploaded,
 }: NewDocumentModalProps) {
   // States for document creation
   const [newDocTitle, setNewDocTitle] = useState("");
@@ -130,7 +132,7 @@ export function NewDocumentModal({
       console.log("Making API request to fetch tags...");
 
       // Direct URL from the curl example
-      const response = await fetch("http://localhost:8000/tags", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tags`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${hardcodedToken}`,
@@ -196,13 +198,16 @@ export function NewDocumentModal({
 
       console.log("Making API request to fetch document types...");
 
-      const response = await fetch("http://localhost:8000/document-type/", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/document-type/`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       console.log("API Response status:", response.status);
 
@@ -306,14 +311,17 @@ export function NewDocumentModal({
       console.log("Uploading document with FormData");
 
       // Send the request to the API with FormData (multipart/form-data)
-      const response = await fetch("http://localhost:8000/documents/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          // Don't set Content-Type manually - the browser will set it with the correct boundary
-        },
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/documents/`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            // Don't set Content-Type manually - the browser will set it with the correct boundary
+          },
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -333,17 +341,20 @@ export function NewDocumentModal({
       if (responseData && responseData.id && notes) {
         try {
           // Call the notes API to save notes for this document
-          const notesResponse = await fetch("http://localhost:8000/notes/", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              note: notes,
-              document: responseData.id,
-            }),
-          });
+          const notesResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/notes/`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                note: notes,
+                document: responseData.id,
+              }),
+            }
+          );
 
           if (!notesResponse.ok) {
             const errorText = await notesResponse.text();
@@ -364,6 +375,12 @@ export function NewDocumentModal({
 
       // Reset form and close modal
       resetForm();
+
+      // Notify parent component that a document was uploaded
+      if (onDocumentUploaded) {
+        onDocumentUploaded();
+      }
+
       onClose();
     } catch (error) {
       console.error("Failed to upload document:", error);
@@ -485,11 +502,11 @@ export function NewDocumentModal({
                               return tag ? (
                                 <span
                                   key={tag.id}
-                                  className="text-xs px-2 py-1 rounded flex items-center"
-                                  style={{
-                                    backgroundColor: `${tag.color}20`,
-                                    color: tag.color,
-                                  }}
+                                  className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
+                                  // style={{
+                                  //   backgroundColor: `${tag.color}20`,
+                                  //   color: tag.color,
+                                  // }}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   {tag.name}
@@ -625,92 +642,96 @@ export function NewDocumentModal({
               {/* Correspondent and Document Type */}
               <div className="grid grid-cols-2 gap-4">
                 {/* Correspondent Dropdown */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Correspondent
-                  </label>
-                  <div className="relative" ref={correspondentDropdownRef}>
-                    <div className="flex">
-                      <div
-                        className="w-full px-3 py-2 border border-gray-300 rounded-l-md flex justify-between items-center cursor-pointer"
-                        onClick={() =>
-                          setIsCorrespondentDropdownOpen(
-                            !isCorrespondentDropdownOpen
-                          )
-                        }
-                      >
-                        <span>
-                          {selectedCorrespondent
-                            ? correspondents.find(
-                                (c) => c.id === selectedCorrespondent
-                              )?.name
-                            : "Select correspondent..."}
-                        </span>
-                        <ChevronDown className="h-4 w-4" />
-                      </div>
-                      <button
-                        className="px-2 py-2 bg-blue-600 text-white border border-blue-600 rounded-r-md hover:bg-blue-700"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsNewCorrespondentModalOpen(true);
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    {isCorrespondentDropdownOpen && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-                        <div className="p-2">
-                          <input
-                            type="text"
-                            value={correspondentSearchTerm}
-                            onChange={(e) =>
-                              setCorrespondentSearchTerm(e.target.value)
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Search correspondents..."
-                            onClick={(e) => e.stopPropagation()}
-                          />
+                <fieldset disabled className="opacity-50 cursor-not-allowed">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Correspondent
+                    </label>
+                    <div className="relative" ref={correspondentDropdownRef}>
+                      <div className="flex">
+                        <div
+                          className="w-full px-3 py-2 border border-gray-300 rounded-l-md flex justify-between items-center cursor-not-allowed"
+                          // onClick={() =>
+                          //   setIsCorrespondentDropdownOpen(
+                          //     !isCorrespondentDropdownOpen
+                          //   )
+                          // }
+                        >
+                          <span>
+                            {selectedCorrespondent
+                              ? correspondents.find(
+                                  (c) => c.id === selectedCorrespondent
+                                )?.name
+                              : "Select correspondent..."}
+                          </span>
+                          <ChevronDown className="h-4 w-4" />
                         </div>
-                        <div className="max-h-60 overflow-y-auto">
-                          {correspondents
-                            .filter((c) =>
+                        <button
+                          className="px-2 py-2 bg-blue-600 text-white border border-blue-600 rounded-r-md hover:bg-blue-700 cursor-not-allowed"
+                          // onClick={(e) => {
+                          //   e.stopPropagation();
+                          //   setIsNewCorrespondentModalOpen(true);
+                          // }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {isCorrespondentDropdownOpen && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+                          <div className="p-2">
+                            <input
+                              type="text"
+                              value={correspondentSearchTerm}
+                              onChange={(e) =>
+                                setCorrespondentSearchTerm(e.target.value)
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Search correspondents..."
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div className="max-h-60 overflow-y-auto">
+                            {correspondents
+                              .filter((c) =>
+                                c.name
+                                  .toLowerCase()
+                                  .includes(
+                                    correspondentSearchTerm.toLowerCase()
+                                  )
+                              )
+                              .map((correspondent) => (
+                                <div
+                                  key={correspondent.id}
+                                  className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                                    selectedCorrespondent === correspondent.id
+                                      ? "bg-blue-50"
+                                      : ""
+                                  }`}
+                                  onClick={() => {
+                                    setSelectedCorrespondent(correspondent.id);
+                                    setIsCorrespondentDropdownOpen(false);
+                                    setCorrespondentSearchTerm("");
+                                  }}
+                                >
+                                  {correspondent.name}
+                                </div>
+                              ))}
+                            {correspondents.filter((c) =>
                               c.name
                                 .toLowerCase()
                                 .includes(correspondentSearchTerm.toLowerCase())
-                            )
-                            .map((correspondent) => (
-                              <div
-                                key={correspondent.id}
-                                className={`p-2 hover:bg-gray-100 cursor-pointer ${
-                                  selectedCorrespondent === correspondent.id
-                                    ? "bg-blue-50"
-                                    : ""
-                                }`}
-                                onClick={() => {
-                                  setSelectedCorrespondent(correspondent.id);
-                                  setIsCorrespondentDropdownOpen(false);
-                                  setCorrespondentSearchTerm("");
-                                }}
-                              >
-                                {correspondent.name}
+                            ).length === 0 && (
+                              <div className="p-2 text-gray-500 text-center">
+                                No correspondent found
                               </div>
-                            ))}
-                          {correspondents.filter((c) =>
-                            c.name
-                              .toLowerCase()
-                              .includes(correspondentSearchTerm.toLowerCase())
-                          ).length === 0 && (
-                            <div className="p-2 text-gray-500 text-center">
-                              No correspondent found
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
+                </fieldset>
 
                 {/* Document Type Dropdown */}
                 <div>

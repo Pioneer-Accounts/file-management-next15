@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -22,9 +23,11 @@ import {
   Tag,
   FileType,
   ChevronLeft,
+  UserCircle,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Cookies from "js-cookie";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardLayout({
   children,
@@ -37,16 +40,47 @@ export default function DashboardLayout({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(true);
   const [isSystemSetupExpanded, setIsSystemSetupExpanded] = useState(true);
-  // Add state for user profile
+  // Update state for user profile to include profile picture
   const [userProfile, setUserProfile] = useState<{
     email: string;
     fullName: string;
+    username?: string;
+    profilePic?: string | null;
   }>({
     email: "",
     fullName: "",
+    username: "",
+    profilePic: null,
   });
 
+  // State for profile dropdown visibility
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
+  // Ref for profile dropdown for click outside handling
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
   // Fetch user profile on component mount
+  // Click outside handler for profile dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileDropdownOpen(false);
+      }
+    }
+
+    // Add click event listener if dropdown is open
+    if (isProfileDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isProfileDropdownOpen]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -75,6 +109,8 @@ export default function DashboardLayout({
           setUserProfile({
             email: data.user.email || "",
             fullName: data.full_name?.trim(),
+            username: data.user.username || "",
+            profilePic: data.profile_pic || null,
           });
           Cookies.set("FMSUID", data.id, { expires: 7 });
         } else if (response.status === 401 && isMounted) {
@@ -95,6 +131,34 @@ export default function DashboardLayout({
       isMounted = false;
     };
   }, []);
+
+  // Add event listener for profile updates
+  useEffect(() => {
+    // Function to handle profile update events
+    const handleProfileUpdate = (event: CustomEvent) => {
+      const { fullName, email, username, profilePic } = event.detail;
+      setUserProfile({
+        email: email || userProfile.email,
+        fullName: fullName || userProfile.fullName,
+        username: username || userProfile.username,
+        profilePic: profilePic || userProfile.profilePic,
+      });
+    };
+
+    // Add event listener
+    window.addEventListener(
+      "profileUpdated",
+      handleProfileUpdate as EventListener
+    );
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener(
+        "profileUpdated",
+        handleProfileUpdate as EventListener
+      );
+    };
+  }, [userProfile]);
 
   // Handle logout function
   const handleLogout = () => {
@@ -260,11 +324,11 @@ export default function DashboardLayout({
             </div>
 
             <Link
-              href="/dashboard/users"
+              href="/dashboard/profile"
               className={`flex items-center ${
                 isCollapsed ? "justify-center" : "px-3"
               } py-2.5 text-sm font-medium rounded-md group ${
-                pathname === "/dashboard/users"
+                pathname === "/dashboard/profile"
                   ? "bg-blue-50 text-blue-700"
                   : "text-gray-700 hover:bg-gray-100"
               }`}
@@ -272,7 +336,7 @@ export default function DashboardLayout({
             >
               <Users
                 className={`${isCollapsed ? "" : "mr-3"} h-5 w-5 ${
-                  pathname === "/dashboard/users"
+                  pathname === "/dashboard/profile"
                     ? "text-blue-600"
                     : "text-gray-500 group-hover:text-gray-600"
                 }`}
@@ -375,46 +439,6 @@ export default function DashboardLayout({
             </Link>
           </nav>
         </div>
-
-        {/* User Profile */}
-        <div className="border-t border-gray-200 p-4">
-          {isCollapsed ? (
-            <div className="flex justify-center">
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                aria-label="Logout"
-                title="Logout"
-              >
-                <LogOut size={20} />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                  <User size={18} />
-                </div>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-800">
-                  {userProfile.fullName || "User"}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {userProfile.email || "Loading..."}
-                </p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="ml-auto p-1 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                aria-label="Logout"
-                title="Logout"
-              >
-                <LogOut size={18} />
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Main Content */}
@@ -429,10 +453,62 @@ export default function DashboardLayout({
           </button>
 
           <div className="ml-auto flex items-center space-x-4">
-            <button className="p-1.5 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 relative">
-              <Bell size={20} />
-              <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
-            </button>
+            <div className="relative" ref={profileDropdownRef}>
+              <button
+                className="p-1 rounded-full overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              >
+                <div className="h-8 w-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                  {userProfile.profilePic ? (
+                    <Image
+                      src={userProfile.profilePic}
+                      alt="Profile"
+                      width={32}
+                      height={32}
+                      className="object-cover"
+                    />
+                  ) : (
+                    <UserCircle className="h-8 w-8 text-gray-400" />
+                  )}
+                </div>
+              </button>
+
+              {/* Profile Dropdown */}
+              <AnimatePresence>
+                {isProfileDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden"
+                  >
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-700">
+                        {userProfile.fullName || "User"}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        @
+                        {userProfile.username ||
+                          userProfile.email.split("@")[0]}
+                      </p>
+                    </div>
+                    <div className="p-1">
+                      <button
+                        onClick={() => {
+                          setIsProfileDropdownOpen(false);
+                          handleLogout();
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-150 flex items-center"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </header>
 

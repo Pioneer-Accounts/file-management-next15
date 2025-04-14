@@ -11,7 +11,7 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -20,7 +20,7 @@ export default function ForgotPassword() {
     try {
       // Updated to match the curl command structure
       await axios.post(
-        "http://localhost:8000/accounts/password-reset/request/",
+        `${process.env.NEXT_PUBLIC_API_URL}/accounts/password-reset/request/`,
         JSON.stringify({
           email: email.trim(),
         }),
@@ -61,14 +61,20 @@ export default function ForgotPassword() {
         </div>
         <div className="w-1/2 p-12 from-blue-100 via-blue-50 to-teal-50 bg-gradient-to-br flex items-center justify-center">
           <div className="max-w-md w-full">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Forgot Password?</h2>
-            <p className="text-gray-500 text-sm mb-8">Enter your email to reset your password.</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              Forgot Password?
+            </h2>
+            <p className="text-gray-500 text-sm mb-8">
+              Enter your email to reset your password.
+            </p>
 
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
             <form onSubmit={handleSubmit}>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
                 <input
                   type="email"
                   className="w-full p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

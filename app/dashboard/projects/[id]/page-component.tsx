@@ -6,7 +6,7 @@ import { ProjectHeader } from "@/components/projects/ProjectHeader";
 import { SearchFilterBar } from "@/components/projects/SearchFilterBar";
 import { DocumentCard } from "@/components/projects/DocumentCard";
 import { NewDocumentModal } from "@/components/projects/NewDocumentModal";
-import { FileText } from "lucide-react";
+import { Download, Edit, Eye, FileText, MoreVertical } from "lucide-react";
 import Cookies from "js-cookie";
 
 // Helper function to determine financial year from date
@@ -46,10 +46,16 @@ interface Document {
   thumbnail_str?: string; // Base64 encoded thumbnail string
 }
 
+// Define interfaces
 interface Tag {
   id: number;
   name: string;
   color: string;
+}
+
+interface DocumentType {
+  id: number;
+  name: string;
 }
 
 export default function ProjectDetailPage() {
@@ -74,16 +80,27 @@ export default function ProjectDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // State for search term, documents, and tags
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
+  // Store tag IDs as strings in selectedTags
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
+  const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
 
   // Fetch project data from API
   useEffect(() => {
     fetchProject();
     fetchDocuments();
     fetchTags();
+    fetchDocumentTypes();
   }, [projectId]);
+
+  // Fetch documents when search term changes
+  useEffect(() => {
+    fetchDocuments();
+  }, [searchTerm, selectedTags, selectedFinancialYear, selectedDocumentType]);
 
   // Function to fetch project data from API
   async function fetchProject() {
@@ -95,7 +112,7 @@ export default function ProjectDetailPage() {
       }
 
       const response = await fetch(
-        `http://localhost:8000/projects/${projectId}/`,
+        `${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/`,
         {
           method: "GET",
           headers: {
@@ -161,16 +178,61 @@ export default function ProjectDetailPage() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch(
-        `http://localhost:8000/documents/?project=${projectId}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
+      // Build URL with query parameters using URLSearchParams
+      const queryParams = new URLSearchParams();
+      
+      // Add project ID
+      queryParams.append("project", projectId);
+      
+      // Add search parameter if search term exists
+      if (searchTerm.trim()) {
+        queryParams.append("search", searchTerm.trim());
+      }
+      
+      // Add tag filtering - updated to handle multiple tag parameters
+      if (selectedTags.length > 0) {
+        // Instead of joining with commas, add each tag as a separate parameter
+        selectedTags.forEach(tagId => {
+          queryParams.append("tags", tagId);
+        });
+      }
+
+      // Add financial year filtering if selected
+      if (selectedFinancialYear) {
+        // Parse financial year in format "AY - 2023-24"
+        const match = selectedFinancialYear.match(/AY - (\d{4})-(\d{2})/);
+        if (match) {
+          const startYear = parseInt(match[1]);
+          const endYear = parseInt(`20${match[2]}`); // Convert "24" to 2024
+          
+          // In India, financial year starts from April 1st and ends on March 31st
+          const startDate = `${startYear}-04-01`;
+          const endDate = `${endYear}-03-31`;
+          
+          queryParams.append("created_min", startDate);
+          queryParams.append("created_max", endDate);
         }
-      );
+      }
+
+      // Add document type filtering if implemented
+      if (selectedDocumentType) {
+        // Find the document type ID that matches the selected name
+        const documentType = documentTypes.find(type => type.name === selectedDocumentType);
+        if (documentType) {
+          queryParams.append("document_type", documentType.id.toString());
+        }
+      }
+
+      // Construct the final URL
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/documents/?${queryParams.toString()}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
@@ -178,6 +240,7 @@ export default function ProjectDetailPage() {
 
       const data = await response.json();
       setDocuments(data.results);
+      console.log("Fetched documents with filters:", url, data.results);
     } catch (error) {
       console.error("Failed to fetch documents:", error);
       // Handle error - show error message to user
@@ -195,7 +258,7 @@ export default function ProjectDetailPage() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch("http://localhost:8000/tags", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tags`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -214,22 +277,54 @@ export default function ProjectDetailPage() {
     }
   };
 
-  // States for filtering and searching
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedFinancialYear, setSelectedFinancialYear] =
-    useState<string>("");
-  const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
+  // Function to fetch document types from API
+  const fetchDocumentTypes = async () => {
+    try {
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/document-type/`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setDocumentTypes(data);
+      // Extract document type names for the SearchFilterBar
+      setDocumentTypeNames(data.map((type: DocumentType) => type.name));
+    } catch (error) {
+      console.error("Failed to fetch document types:", error);
+    }
+  };
+
+  // State for new document modal
   const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
 
-  // Sample financial years
-  const financialYears = [
-    "AY - 2023-24",
-    "AY - 2024-25",
-    "AY - 2022-23",
-    "AY - 2021-22",
-    "AY - 2020-21",
-  ];
+  // Generate financial years from 1900 to current year
+  const generateFinancialYears = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+
+    // Start from current year and go back to 1900
+    for (let year = currentYear; year >= 1900; year--) {
+      years.push(`AY - ${year}-${(year + 1).toString().slice(-2)}`);
+    }
+
+    return years;
+  };
+
+  // Replace hardcoded financial years with dynamically generated ones
+  const financialYears = generateFinancialYears();
 
   // Helper function to process base64 string to data URL
   function getImageUrlFromBase64(
@@ -245,25 +340,8 @@ export default function ProjectDetailPage() {
     }
   }
 
-  // Sample data for tags
-  const allTags = [
-    "Important",
-    "Urgent",
-    "Personal",
-    "Business",
-    "Finance",
-    "Legal",
-    "Tax",
-    "Insurance",
-    "design",
-    "prototype",
-    "wireframe",
-    "mockup",
-    "final",
-    "approved",
-    "revision",
-    "draft",
-  ];
+  // Use tag objects directly rather than just the names
+  // This will allow us to use the IDs in the checkbox components
 
   // Sample correspondents data
   const correspondents = [
@@ -274,16 +352,16 @@ export default function ProjectDetailPage() {
     { id: "5", name: "Michael Brown" },
   ];
 
-  // Sample document types
-  const documentTypes = [
-    "Invoice",
-    "Contract",
-    "Report",
-    "Proposal",
-    "Receipt",
-    "Letter",
-    "Memo",
-  ];
+  // State for document types
+  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+  // Array of document type names for the SearchFilterBar component
+  const [documentTypeNames, setDocumentTypeNames] = useState<string[]>([]);
+
+  // Convert document types from API to format needed for dropdown - include both name and id
+  const documentTypeOptions = documentTypes.map((type) => ({
+    id: type.id.toString(),
+    name: type.name
+  }));
 
   // Filter documents based on search term and selected filters
   const filteredDocuments = documents.filter((doc) => {
@@ -292,17 +370,20 @@ export default function ProjectDetailPage() {
       searchTerm === "" ||
       doc.title.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Tag filter - we'd need to fetch tag names to match by name
-    // For now, we'll just assume they're empty
-    const matchesTags = selectedTags.length === 0;
+    // Tag filter - check if document has any of the selected tags
+    const matchesTags =
+      selectedTags.length === 0 ||
+      doc.tags.some((tagId) => 
+        selectedTags.includes(tagId.toString())
+      );
 
     // Financial Year filter
     // We'll skip financial year filtering since API documents don't have this field directly
     const matchesFinancialYear = !selectedFinancialYear || true;
 
-    // Document Type filter
-    // We'll skip document type filtering since API documents don't have this field directly
-    const matchesDocumentType = !selectedDocumentType || true;
+    // Document Type filter is handled by the API
+    // Local filtering is not needed as the API returns the filtered results
+    const matchesDocumentType = true;
 
     return (
       matchesSearch &&
@@ -328,13 +409,13 @@ export default function ProjectDetailPage() {
         selectedDocumentType={selectedDocumentType}
         setSelectedDocumentType={setSelectedDocumentType}
         onNewDocument={() => setIsNewDocModalOpen(true)}
-        allTags={allTags}
+        allTags={tags}
         financialYears={financialYears}
-        documentTypes={documentTypes}
+        documentTypes={documentTypeOptions.map(type => type.name)}
       />
 
       {/* Project Documents Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         {isLoadingDocuments ? (
           // Loading state for documents
           Array(5)
@@ -342,15 +423,9 @@ export default function ProjectDetailPage() {
             .map((_, index) => (
               <div
                 key={index}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-[280px]"
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
               >
-                <div className="p-2 flex gap-1">
-                  <div className="h-6 w-16 bg-blue-200 rounded-full animate-pulse"></div>
-                  <div className="h-6 w-20 bg-blue-200 rounded-full animate-pulse"></div>
-                </div>
-                <div className="flex-1 flex items-center justify-center h-[180px]">
-                  <div className="w-12 h-12 bg-gray-200 rounded animate-pulse"></div>
-                </div>
+                <div className="relative aspect-square bg-gray-100 animate-pulse"></div>
                 <div className="p-4">
                   <div className="h-4 bg-gray-200 rounded animate-pulse mb-2"></div>
                   <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2"></div>
@@ -361,86 +436,73 @@ export default function ProjectDetailPage() {
           filteredDocuments.map((doc) => (
             <div
               key={doc.id}
-              className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all group relative h-[280px] flex flex-col"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all group"
             >
-              {/* Tags at the top */}
-              <div className="p-2 flex flex-wrap gap-1">
-                {doc.tags && doc.tags.length > 0 ? (
-                  doc.tags.slice(0, 3).map((tagId, index) => {
-                    // Find the tag object that matches the ID
-                    const tag = tags.find((t) => t.id === tagId);
-                    return (
-                      <span
-                        key={index}
-                        className="inline-block text-xs px-3 py-1 rounded-full font-medium"
-                        style={
-                          tag?.color
-                            ? { backgroundColor: tag.color }
-                            : { backgroundColor: "#dbeafe" }
-                        }
-                      >
-                        {tag ? tag.name : `Tag ${tagId}`}
-                      </span>
-                    );
-                  })
-                ) : (
-                  <span className="inline-block bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full">
-                    No tags
-                  </span>
-                )}
-              </div>
-
-              {/* Document icon in center */}
-              <div className="flex-1 flex items-center justify-center">
+              {/* Thumbnail with hover overlay */}
+              <div className="relative aspect-square bg-gray-100">
                 {doc.thumbnail_str ? (
-                  <div className="relative w-16 h-20">
-                    <img
-                      src={getImageUrlFromBase64(doc.thumbnail_str) || ""}
-                      alt={doc.title}
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = "none";
-                        const fallbackEl = document.getElementById(
-                          `fallback-${doc.id}`
-                        );
-                        if (fallbackEl) {
-                          fallbackEl.style.display = "flex";
-                        }
-                      }}
-                    />
-                    <div
-                      id={`fallback-${doc.id}`}
-                      className="absolute inset-0 w-full h-full items-center justify-center"
-                      style={{ display: "none" }}
-                    >
-                      <FileText className="w-12 h-12 text-gray-300" />
+                  <>
+                    <div className="relative w-full h-full">
+                      <img
+                        src={getImageUrlFromBase64(doc.thumbnail_str) || ""}
+                        alt={doc.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.log(
+                            "Image failed to load for document:",
+                            doc.id
+                          );
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = "none";
+                          const fallbackEl = document.getElementById(
+                            `fallback-${doc.id}`
+                          );
+                          if (fallbackEl) {
+                            fallbackEl.style.display = "flex";
+                          }
+                        }}
+                      />
+                      <div
+                        id={`fallback-${doc.id}`}
+                        className="absolute inset-0 w-full h-full items-center justify-center"
+                        style={{ display: "none" }}
+                      >
+                        <FileText className="w-16 h-16 text-gray-300" />
+                      </div>
                     </div>
-                  </div>
+                  </>
                 ) : (
-                  <FileText className="w-12 h-12 text-gray-300" />
+                  <div className="w-full h-full flex items-center justify-center">
+                    <FileText className="w-16 h-16 text-gray-300" />
+                  </div>
                 )}
-              </div>
 
-              {/* Document info at bottom */}
-              <div className="p-4 border-t border-gray-100">
-                <h3 className="text-sm font-medium text-gray-800 line-clamp-1">
-                  {doc.title}
-                </h3>
-                <div className="mt-1 text-xs text-gray-500">
-                  {doc.created_date && (
-                    <span>
-                      {new Date(doc.created_date).toISOString().split("T")[0]}
+                {/* Tags */}
+                <div className="absolute top-3 left-3 flex flex-wrap gap-1">
+                  {doc.tags && doc.tags.length > 0 ? (
+                    doc.tags.slice(0, 3).map((tagId, index) => {
+                      // Find the tag object that matches the ID
+                      const tag = tags.find((t) => t.id === tagId);
+                      return (
+                        <span
+                          key={index}
+                          className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
+                        >
+                          {tag ? tag.name : `Tag ${tagId}`}
+                        </span>
+                      );
+                    })
+                  ) : (
+                    <span className="inline-block bg-gray-500 bg-opacity-50 text-white text-xs px-2 py-1 rounded-full">
+                      No tags
                     </span>
                   )}
                 </div>
-              </div>
 
-              {/* Dropdown menu (three dots) */}
-              <div className="absolute top-2 right-2">
-                <div className="relative">
+                {/* Action menu */}
+                <div className="absolute top-3 right-3">
                   <button
-                    className="p-1 text-gray-400 hover:text-gray-600"
+                    className="p-1.5 rounded-full bg-white bg-opacity-80 text-gray-500 hover:text-gray-700 hover:bg-opacity-100 relative"
                     onClick={(e) => {
                       e.stopPropagation();
                       const dropdown = e.currentTarget.nextElementSibling;
@@ -449,62 +511,53 @@ export default function ProjectDetailPage() {
                       }
                     }}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="1"></circle>
-                      <circle cx="12" cy="5" r="1"></circle>
-                      <circle cx="12" cy="19" r="1"></circle>
-                    </svg>
+                    <MoreVertical className="w-4 h-4" />
                   </button>
-                  <div className="absolute right-0 mt-1 w-36 bg-white shadow-lg rounded-md border border-gray-200 hidden z-10">
-                    <div className="py-1">
-                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="mr-2"
-                        >
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                        </svg>
-                        Edit
-                      </button>
-                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="mr-2"
-                        >
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                          <polyline points="7 10 12 15 17 10"></polyline>
-                          <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        Download
-                      </button>
-                    </div>
+
+                  <div className="absolute right-0 top-8 w-36 bg-white rounded-md shadow-lg z-10 border border-gray-200 py-1 hidden">
+                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </button>
+                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Document Info */}
+              <div className="p-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-gray-800 font-medium line-clamp-1">
+                      {doc.title}
+                    </h3>
+                    <p className="text-gray-500 text-sm mt-1">
+                      {doc.created_date && (
+                        <span>
+                          {
+                            new Date(doc.created_date)
+                              .toISOString()
+                              .split("T")[0]
+                          }
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  {/* View button */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
+                      title="View"
+                      onClick={() => {
+                        // Handle view action
+                        console.log("View document", doc.id);
+                      }}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -527,10 +580,14 @@ export default function ProjectDetailPage() {
       <NewDocumentModal
         isOpen={isNewDocModalOpen}
         onClose={() => setIsNewDocModalOpen(false)}
-        allTags={allTags}
+        allTags={tags.map(tag => tag.name)}
         correspondents={correspondents}
-        documentTypes={documentTypes}
+        documentTypes={documentTypeOptions.map(type => type.name)}
         projectId={projectId} // Pass project ID for API association
+        onDocumentUploaded={() => {
+          // Refresh the document list when a new document is uploaded
+          fetchDocuments();
+        }}
       />
     </div>
   );

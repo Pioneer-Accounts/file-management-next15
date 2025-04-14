@@ -28,7 +28,9 @@ import { MoreVertical } from "lucide-react";
 import Cookies from "js-cookie";
 
 // Helper function to process base64 string to data URL
-function getImageUrlFromBase64(base64String: string | undefined): string | null {
+function getImageUrlFromBase64(
+  base64String: string | undefined
+): string | null {
   if (!base64String) return null;
   try {
     // Try to determine the type of image from the base64 data
@@ -36,7 +38,7 @@ function getImageUrlFromBase64(base64String: string | undefined): string | null 
     // we'll use a generic image type that browsers can usually auto-detect
     return `data:image/*;base64,${base64String}`;
   } catch (e) {
-    console.error('Error processing base64 image:', e);
+    console.error("Error processing base64 image:", e);
     return null;
   }
 }
@@ -48,8 +50,18 @@ export default function Documents() {
   // Define our date range state to match the structure from react-day-picker
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+  const [isFinancialYearDropdownOpen, setIsFinancialYearDropdownOpen] =
+    useState(false);
+  const [isDocumentTypeDropdownOpen, setIsDocumentTypeDropdownOpen] =
+    useState(false);
   const [tagSearchTerm, setTagSearchTerm] = useState("");
+  const [financialYearSearchTerm, setFinancialYearSearchTerm] = useState("");
+  const [selectedFinancialYear, setSelectedFinancialYear] =
+    useState<string>("");
+  const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
   const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const financialYearDropdownRef = useRef<HTMLDivElement>(null);
+  const documentTypeDropdownRef = useRef<HTMLDivElement>(null);
   // Add the activeDropdown state here inside the component
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
   // Add state for upload modal
@@ -68,6 +80,15 @@ export default function Documents() {
 
   // Add state for tags
   const [tags, setTags] = useState<Tag[]>([]);
+
+  // Interface for document type
+  interface DocumentType {
+    id: number;
+    name: string;
+  }
+
+  // State for document types
+  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
 
   // Add this interface for document type
   interface Document {
@@ -93,7 +114,7 @@ export default function Documents() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch("http://localhost:8000/tags", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tags`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -112,6 +133,66 @@ export default function Documents() {
     }
   };
 
+  // Function to fetch document types from API
+  const fetchDocumentTypes = async () => {
+    try {
+      const accessToken = Cookies.get("accessToken");
+
+      if (!accessToken) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/document-type/`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setDocumentTypes(data);
+    } catch (error) {
+      console.error("Failed to fetch document types:", error);
+    }
+  };
+
+  // Helper function to determine financial year from date
+  function getFinancialYearFromDate(date: Date): string {
+    const month = date.getMonth();
+    const year = date.getFullYear();
+
+    // In India, financial year is from April to March
+    if (month < 3) {
+      // January to March
+      return `AY - ${year - 1}-${year.toString().slice(-2)}`;
+    } else {
+      // April to December
+      return `AY - ${year}-${(year + 1).toString().slice(-2)}`;
+    }
+  }
+
+  // Generate financial years from 1900 to current year
+  const generateFinancialYears = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+
+    // Start from current year and go back to 1900
+    for (let year = currentYear; year >= 1900; year--) {
+      years.push(`AY - ${year}-${(year + 1).toString().slice(-2)}`);
+    }
+
+    return years;
+  };
+
+  const financialYears = generateFinancialYears();
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -120,6 +201,20 @@ export default function Documents() {
         !tagDropdownRef.current.contains(event.target as Node)
       ) {
         setIsTagDropdownOpen(false);
+      }
+
+      if (
+        financialYearDropdownRef.current &&
+        !financialYearDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsFinancialYearDropdownOpen(false);
+      }
+
+      if (
+        documentTypeDropdownRef.current &&
+        !documentTypeDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDocumentTypeDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -146,7 +241,13 @@ export default function Documents() {
   useEffect(() => {
     fetchDocuments();
     fetchTags();
+    fetchDocumentTypes();
   }, []);
+
+  // Add useEffect to fetch documents when filters change
+  useEffect(() => {
+    fetchDocuments();
+  }, [searchTerm, selectedTags, selectedFinancialYear, selectedDocumentType]);
 
   // Function to fetch documents from API
   const fetchDocuments = async () => {
@@ -158,7 +259,57 @@ export default function Documents() {
         throw new Error("Authentication token not found");
       }
 
-      const response = await fetch("http://localhost:8000/documents/", {
+      // Build URL with query parameters
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/documents/`;
+      const queryParams = new URLSearchParams();
+      // Add search parameter if search term exists
+      if (searchTerm.trim()) {
+        queryParams.append("search", searchTerm.trim());
+      }
+
+      // Add tag filtering - updated to handle multiple tag parameters
+      if (selectedTags.length > 0) {
+        // Instead of joining with commas, add each tag as a separate parameter
+        selectedTags.forEach((tagId) => {
+          queryParams.append("tags", tagId);
+        });
+      }
+
+      // Add financial year filtering if selected
+      if (selectedFinancialYear) {
+        // Parse financial year in format "AY - 2023-24"
+        const match = selectedFinancialYear.match(/AY - (\d{4})-(\d{2})/);
+        if (match) {
+          const startYear = parseInt(match[1]);
+          const endYear = parseInt(`20${match[2]}`); // Convert "24" to 2024
+
+          // In India, financial year starts from April 1st and ends on March 31st
+          const startDate = `${startYear}-04-01`;
+          const endDate = `${endYear}-03-31`;
+
+          queryParams.append("created_min", startDate);
+          queryParams.append("created_max", endDate);
+        }
+      }
+
+      // Add document type filtering if implemented
+      if (selectedDocumentType) {
+        // Find the document type ID that matches the selected name
+        const documentType = documentTypes.find(
+          (type) => type.name === selectedDocumentType
+        );
+        if (documentType) {
+          queryParams.append("document_type", documentType.id.toString());
+        }
+      }
+
+      // Append query parameters to URL if there are any
+      const queryString = queryParams.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+
+      const response = await fetch(url, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -172,6 +323,7 @@ export default function Documents() {
 
       const data = await response.json();
       setDocuments(data.results);
+      console.log("Fetched documents with filters:", url, data.results);
     } catch (error) {
       console.error("Failed to fetch documents:", error);
       // Handle error - show error message to user
@@ -257,14 +409,17 @@ export default function Documents() {
       }
 
       // Make API call
-      const response = await fetch("http://localhost:8000/documents/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          // Note: Don't set Content-Type when using FormData, browser will set it with boundary
-        },
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/documents/`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            // Note: Don't set Content-Type when using FormData, browser will set it with boundary
+          },
+          body: formData,
+        }
+      );
 
       clearInterval(interval);
 
@@ -410,63 +565,152 @@ export default function Documents() {
           )}
         </div>
 
-        {/* Date Range Filter with Shadcn Calendar */}
-        <div>
-          <Popover>
-            <div className="relative flex">
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={`w-[300px] justify-start text-left font-normal ${
-                    !dateRange || !dateRange.from ? "text-muted-foreground" : ""
-                  }`}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange && dateRange.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "MMM d, yyyy")} -{" "}
-                        {format(dateRange.to, "MMM d, yyyy")}
-                      </>
-                    ) : (
-                      format(dateRange.from, "MMM d, yyyy")
-                    )
-                  ) : (
-                    "Select date range"
-                  )}
-                </Button>
-              </PopoverTrigger>
-
-              {/* Clear button outside of the main button */}
-              {dateRange && (dateRange.from || dateRange.to) && (
+        {/* Date Range Picker */}
+        <Popover>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={dateRange?.from}
+              selected={dateRange}
+              onSelect={setDateRange}
+              numberOfMonths={2}
+            />
+            {dateRange && (
+              <div className="p-3 border-t border-gray-100 flex justify-end">
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 z-10"
+                  className="text-xs text-blue-500 hover:text-blue-700 py-1 h-auto"
                   onClick={() => setDateRange(undefined)}
                 >
-                  <X className="h-3 w-3" />
+                  Clear
                 </Button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+
+        {/* Financial Year Dropdown */}
+        <div className="relative" ref={financialYearDropdownRef}>
+          <button
+            onClick={() =>
+              setIsFinancialYearDropdownOpen(!isFinancialYearDropdownOpen)
+            }
+            className="flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white min-w-[180px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <span className="text-sm truncate">
+              {selectedFinancialYear || "Financial Year"}
+            </span>
+            <ChevronDown className="h-4 w-4 text-gray-500" />
+          </button>
+
+          {isFinancialYearDropdownOpen && (
+            <div className="absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg">
+              <div className="p-2">
+                <div className="relative mb-2">
+                  <input
+                    type="text"
+                    placeholder="Search financial years"
+                    value={financialYearSearchTerm}
+                    onChange={(e) => setFinancialYearSearchTerm(e.target.value)}
+                    className="pl-3 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+
+                <div className="max-h-60 overflow-y-auto">
+                  {financialYears
+                    .filter((year) =>
+                      year
+                        .toLowerCase()
+                        .includes(financialYearSearchTerm.toLowerCase())
+                    )
+                    .map((year) => (
+                      <div
+                        key={year}
+                        className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
+                          selectedFinancialYear === year ? "bg-blue-50" : ""
+                        }`}
+                        onClick={() => {
+                          setSelectedFinancialYear(
+                            year === selectedFinancialYear ? "" : year
+                          );
+                          setIsFinancialYearDropdownOpen(false);
+                        }}
+                      >
+                        <span className="text-sm">{year}</span>
+                      </div>
+                    ))}
+                </div>
+
+                {selectedFinancialYear && (
+                  <div className="border-t border-gray-200 mt-2 pt-2 flex justify-end px-2 pb-2">
+                    <button
+                      onClick={() => {
+                        setSelectedFinancialYear("");
+                        setFinancialYearSearchTerm("");
+                        setIsFinancialYearDropdownOpen(false);
+                      }}
+                      className="text-xs text-blue-500 hover:text-blue-700"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Document Type Dropdown */}
+        <div className="relative" ref={documentTypeDropdownRef}>
+          <button
+            onClick={() =>
+              setIsDocumentTypeDropdownOpen(!isDocumentTypeDropdownOpen)
+            }
+            className="flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white min-w-[180px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <span className="text-sm truncate">
+              {selectedDocumentType || "Document Type"}
+            </span>
+            <ChevronDown className="h-4 w-4 text-gray-500" />
+          </button>
+
+          {isDocumentTypeDropdownOpen && (
+            <div className="absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg">
+              <div className="max-h-60 overflow-y-auto">
+                {documentTypes.map((type) => (
+                  <div
+                    key={type.id}
+                    className={`flex items-center p-2 hover:bg-gray-100 cursor-pointer ${
+                      selectedDocumentType === type.name ? "bg-blue-50" : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedDocumentType(
+                        type.name === selectedDocumentType ? "" : type.name
+                      );
+                      setIsDocumentTypeDropdownOpen(false);
+                    }}
+                  >
+                    <span className="text-sm">{type.name}</span>
+                  </div>
+                ))}
+              </div>
+
+              {selectedDocumentType && (
+                <div className="border-t border-gray-200 mt-2 pt-2 flex justify-end px-2 pb-2">
+                  <button
+                    onClick={() => {
+                      setSelectedDocumentType("");
+                      setIsDocumentTypeDropdownOpen(false);
+                    }}
+                    className="text-xs text-blue-500 hover:text-blue-700"
+                  >
+                    Clear
+                  </button>
+                </div>
               )}
             </div>
-            <PopoverContent className="w-auto p-0 bg-white" align="start">
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={setDateRange}
-                initialFocus
-                numberOfMonths={2}
-                className="bg-white"
-                classNames={{
-                  day_range_start: "day-range-start !bg-blue-600 !text-white",
-                  day_range_end: "day-range-end !bg-blue-600 !text-white",
-                  day_selected: "!bg-blue-600 !text-white hover:!bg-blue-600",
-                  day_range_middle: "!bg-blue-100 !text-blue-800 rounded-none",
-                  cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has(.day-range-start)]:rounded-l-md [&:has(.day-range-end)]:rounded-r-md [&:has(.day-selected)]:bg-blue-100",
-                }}
-              />
-            </PopoverContent>
-          </Popover>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -525,25 +769,30 @@ export default function Documents() {
                     <>
                       <div className="relative w-full h-full">
                         <img
-                          src={getImageUrlFromBase64(doc.thumbnail_str) || ''}
+                          src={getImageUrlFromBase64(doc.thumbnail_str) || ""}
                           alt={doc.title}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            console.log('Image failed to load for document:', doc.id);
+                            console.log(
+                              "Image failed to load for document:",
+                              doc.id
+                            );
                             // Try direct display of the fallback instead of DOM manipulation
                             const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
+                            target.style.display = "none";
                             // Get the fallback element by id
-                            const fallbackEl = document.getElementById(`fallback-${doc.id}`);
+                            const fallbackEl = document.getElementById(
+                              `fallback-${doc.id}`
+                            );
                             if (fallbackEl) {
-                              fallbackEl.style.display = 'flex';
+                              fallbackEl.style.display = "flex";
                             }
                           }}
                         />
-                        <div 
-                          id={`fallback-${doc.id}`} 
-                          className="absolute inset-0 w-full h-full items-center justify-center" 
-                          style={{ display: 'none' }}
+                        <div
+                          id={`fallback-${doc.id}`}
+                          className="absolute inset-0 w-full h-full items-center justify-center"
+                          style={{ display: "none" }}
                         >
                           <FileText className="w-16 h-16 text-gray-300" />
                         </div>

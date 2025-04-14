@@ -27,7 +27,7 @@ export default function Activate() {
     try {
       // Make API request to backend
       await axios.get(
-        `http://localhost:8000/accounts/activate/${token}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/accounts/activate/${token}`,
         {},
       );
       
